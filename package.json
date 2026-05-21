@@ -1,0 +1,24 @@
+{
+  "name": "nutrition-bot",
+  "version": "1.0.0",
+  "description": "Nutrition tracking and recommendation system",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:seed": "tsx src/db/seed/food-dictionary.ts",
+    "bot": "tsx src/bot/index.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "@supabase/supabase-js": "^2.49.1",
+    "grammy": "^1.43.0",
+    "hono": "^4.6.14"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
