@@ -9,6 +9,7 @@ services:
       POSTGRES_DB: nutrition
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d nutrition"]
       interval: 10s
@@ -19,7 +20,7 @@ services:
     image: ghcr.io/blu777/bot-nutricion:latest
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3090:3000"
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -27,7 +28,7 @@ services:
       API_BASE_URL: http://api:3000
       GEMINI_API_KEY: CHANGE_ME
       GEMINI_MODEL: gemini-2.5-flash-lite
-      TELEGRAM_BOT_TOKEN: CHANGE_ME
+      TELEGRAM_BOT_TOKEN: ''  # Disable bot in API container (bot runs in separate service)
     depends_on:
       db:
         condition: service_healthy
