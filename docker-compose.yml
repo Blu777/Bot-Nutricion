@@ -20,13 +20,14 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
-    env_file:
-      - .env
     environment:
       NODE_ENV: production
+      PORT: 3000
       DATABASE_URL: postgresql://postgres:postgres@db:5432/nutrition
       API_BASE_URL: http://api:3000
-      PORT: 3000
+      GEMINI_API_KEY: CHANGE_ME
+      GEMINI_MODEL: gemini-2.5-flash-lite
+      TELEGRAM_BOT_TOKEN: CHANGE_ME
     depends_on:
       db:
         condition: service_healthy
@@ -41,12 +42,13 @@ services:
     image: ghcr.io/blu777/bot-nutricion:latest
     restart: unless-stopped
     command: ["node", "dist/bot/standalone.js"]
-    env_file:
-      - .env
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://postgres:postgres@db:5432/nutrition
       API_BASE_URL: http://api:3000
+      GEMINI_API_KEY: CHANGE_ME
+      GEMINI_MODEL: gemini-2.5-flash-lite
+      TELEGRAM_BOT_TOKEN: CHANGE_ME
     depends_on:
       api:
         condition: service_healthy

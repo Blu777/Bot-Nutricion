@@ -12,7 +12,7 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/nutrition',
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || '',
-    model: 'gemini-2.0-flash',
+    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite',
   },
   telegram: {
     botToken: process.env.TELEGRAM_BOT_TOKEN || '',
