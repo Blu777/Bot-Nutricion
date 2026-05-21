@@ -16,7 +16,7 @@ services:
       retries: 5
 
   api:
-    build: .
+    image: ghcr.io/blu777/bot-nutricion:latest
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -38,7 +38,7 @@ services:
       start_period: 20s
 
   bot:
-    build: .
+    image: ghcr.io/blu777/bot-nutricion:latest
     restart: unless-stopped
     command: ["node", "dist/bot/standalone.js"]
     env_file:
