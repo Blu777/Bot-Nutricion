@@ -9,6 +9,8 @@ import { getOrCreateDailyLog, updateDailyLog } from '../../db/queries/daily-logs
 import { getAllFoods } from '../../db/queries/food-dictionary.js';
 import { trackEvent } from '../../db/queries/events.js';
 import { trackUnknownFood } from '../../db/queries/unknown-foods.js';
+import { logger } from '../../lib/logger.js';
+import { metrics } from '../../lib/metrics.js';
 import type { LogMealRequest, FoodEntry, NutritionValues } from '../../types/index.js';
 
 const mealRoutes = new Hono();
@@ -36,16 +38,17 @@ export function invalidateFoodCache(): void {
 }
 
 mealRoutes.post('/log-meal', async (c) => {
+  const requestId = (c.get('requestId' as never) as string | undefined) ?? 'unknown';
   const body = await c.req.json<LogMealRequest>();
 
   if (!body.telegram_id || !body.text) {
-    return c.json({ error: 'telegram_id and text are required' }, 400);
+    return c.json({ error: { type: 'USER_ERROR', message: 'telegram_id and text are required', request_id: requestId } }, 400);
   }
 
   // 1. Get user
   const user = await getUserByTelegramId(body.telegram_id);
   if (!user) {
-    return c.json({ error: 'User not found. Complete onboarding first.' }, 404);
+    return c.json({ error: { type: 'USER_ERROR', message: 'User not found. Complete onboarding first.', request_id: requestId } }, 404);
   }
 
   // 2. Parse meal text (normalize → tokenize → match)
@@ -53,7 +56,11 @@ mealRoutes.post('/log-meal', async (c) => {
   const { result: initialParseResult, log: parseLog } = parseMealText(body.text, dictionary);
 
   // 3. Log parse pipeline for debugging
-  console.log('[parse]', JSON.stringify(parseLog));
+  logger.debug('parser', 'parse_complete', `Parsed "${body.text}"`, {
+    request_id: requestId,
+    user_id: user.id,
+    meta: { confidence: parseLog.overall_confidence, tokens: parseLog.tokens.length },
+  });
 
   // 3b. Gemini fallback (only when confidence < 0.7 or unknown items)
   const { result: parseResult, fallbackLog } = await applyGeminiFallback(
@@ -61,15 +68,22 @@ mealRoutes.post('/log-meal', async (c) => {
     parseLog,
     dictionary,
     user.id,
+    requestId,
   );
   if (fallbackLog.triggered) {
-    console.log('[fallback]', JSON.stringify(fallbackLog));
+    logger.info('fallback', 'fallback_complete', `method=${fallbackLog.final_method} remapped=${fallbackLog.remapped_items.length}`, {
+      request_id: requestId,
+      user_id: user.id,
+      meta: { reason: fallbackLog.reason, gemini_called: fallbackLog.gemini_called },
+    });
   }
 
   // 3c. Guard: if parser returned zero items, return error
   if (parseResult.items.length === 0) {
+    metrics.incParseFailure();
     trackEvent(user.id, 'parse_failure', { raw_text: body.text, confidence: 0 });
-    return c.json({ error: 'No pude interpretar la comida. Intentá ser más específico.' }, 422);
+    logger.warn('parser', 'parse_failure', `Zero items parsed for: "${body.text}"`, { request_id: requestId, user_id: user.id });
+    return c.json({ error: { type: 'PARSE_ERROR', message: 'No pude interpretar la comida. Intentá ser más específico.', request_id: requestId } }, 422);
   }
 
   // 4. Calculate nutrition
@@ -136,7 +150,18 @@ mealRoutes.post('/log-meal', async (c) => {
     message,
   };
 
-  // 13. Track events (fire-and-forget)
+  // 13. Metrics + log
+  metrics.incMealLog();
+  if (fallbackLog.triggered && fallbackLog.gemini_called) metrics.incGeminiCall();
+  for (const _t of parseResult.unmatched) metrics.incUnknownFood();
+
+  logger.info('api', 'meal_logged', `user=${user.id} items=${parseResult.items.length} confidence=${parseResult.confidence}`, {
+    request_id: requestId,
+    user_id: user.id,
+    meta: { method: parseResult.method, unmatched: parseResult.unmatched },
+  });
+
+  // Track events (fire-and-forget)
   trackEvent(user.id, 'log_meal', {
     raw_text: body.text,
     confidence: parseResult.confidence,

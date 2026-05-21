@@ -7,6 +7,7 @@
 import { callGemini } from './gemini.js';
 import { matchFood } from './matcher.js';
 import { isRateLimited, markGeminiCall, getCachedResult, setCachedResult } from './gemini-limiter.js';
+import { logger } from '../../lib/logger.js';
 import type { ParseResult, ParsedItem, FoodEntry } from '../../types/index.js';
 import type { ParseLog } from './index.js';
 
@@ -26,7 +27,10 @@ export async function applyGeminiFallback(
   parseLog: ParseLog,
   dictionary: FoodEntry[],
   userId?: string,
+  requestId?: string,
 ): Promise<{ result: ParseResult; fallbackLog: FallbackLog }> {
+  const ctx = { request_id: requestId, user_id: userId };
+
   const fallbackLog: FallbackLog = {
     triggered: false,
     reason: null,
@@ -41,7 +45,6 @@ export async function applyGeminiFallback(
   const lowConfidence = parseResult.confidence < CONFIDENCE_THRESHOLD;
 
   if (!hasUnmatched && !lowConfidence) {
-    // Parser did well enough, no fallback needed
     return { result: parseResult, fallbackLog };
   }
 
@@ -53,22 +56,22 @@ export async function applyGeminiFallback(
   fallbackLog.triggered = true;
   fallbackLog.reason = reasons.join('; ');
 
-  console.log(`[fallback] Triggering Gemini fallback: ${fallbackLog.reason}`);
+  logger.info('fallback', 'fallback_triggered', fallbackLog.reason, ctx);
 
   // Rate limiting check
   if (userId && isRateLimited(userId)) {
-    console.log(`[fallback] Rate limited for user ${userId}, skipping Gemini`);
+    logger.warn('fallback', 'rate_limited', `Skipping Gemini for user ${userId}`, ctx);
     return { result: parseResult, fallbackLog };
   }
 
   // Check cache
   const cached = getCachedResult(parseLog.normalized);
   if (cached) {
-    console.log('[fallback] Using cached Gemini result');
+    logger.debug('fallback', 'cache_hit', 'Using cached Gemini result', ctx);
     const geminiResult = cached as Awaited<ReturnType<typeof callGemini>>;
     if (geminiResult && geminiResult.foods.length > 0) {
-      fallbackLog.gemini_called = false; // cached, not a real call
-      return applyGeminiMapping(geminiResult, parseResult, dictionary, fallbackLog);
+      fallbackLog.gemini_called = false;
+      return applyGeminiMapping(geminiResult, parseResult, dictionary, fallbackLog, ctx);
     }
     return { result: parseResult, fallbackLog };
   }
@@ -77,17 +80,16 @@ export async function applyGeminiFallback(
   if (userId) markGeminiCall(userId);
   const geminiResult = await callGemini(parseLog.normalized, parseResult.unmatched);
 
-  // Cache the result
   setCachedResult(parseLog.normalized, geminiResult);
 
   if (!geminiResult || geminiResult.foods.length === 0) {
-    console.log('[fallback] Gemini returned no usable results');
+    logger.warn('fallback', 'gemini_empty', 'Gemini returned no usable results', ctx);
     fallbackLog.gemini_called = true;
     return { result: parseResult, fallbackLog };
   }
 
   fallbackLog.gemini_called = true;
-  return applyGeminiMapping(geminiResult, parseResult, dictionary, fallbackLog);
+  return applyGeminiMapping(geminiResult, parseResult, dictionary, fallbackLog, ctx);
 }
 
 function applyGeminiMapping(
@@ -95,6 +97,7 @@ function applyGeminiMapping(
   parseResult: ParseResult,
   dictionary: FoodEntry[],
   fallbackLog: FallbackLog,
+  ctx: { request_id?: string; user_id?: string },
 ): { result: ParseResult; fallbackLog: FallbackLog } {
   fallbackLog.gemini_response = geminiResult.foods.map((f) => ({
     original_text: f.original_text,
@@ -102,7 +105,10 @@ function applyGeminiMapping(
     suggested_name: f.suggested_name,
   }));
 
-  console.log('[fallback] Gemini suggestions:', JSON.stringify(fallbackLog.gemini_response));
+  logger.debug('fallback', 'gemini_suggestions', `${geminiResult.foods.length} suggestions received`, {
+    ...ctx,
+    meta: { suggestions: fallbackLog.gemini_response },
+  });
 
   // Remap unmatched items using Gemini suggestions
   const updatedItems = [...parseResult.items];
@@ -137,7 +143,7 @@ function applyGeminiMapping(
       food_id: mapped.food.id,
     });
 
-    console.log(`[fallback] Remapped: "${oldItem.name}" → "${mapped.food.name}" (${mapped.food.id})`);
+    logger.info('fallback', 'item_remapped', `"${oldItem.name}" → "${mapped.food.name}" (${mapped.food.id})`, ctx);
   }
 
   // Rebuild ParseResult
@@ -157,7 +163,7 @@ function applyGeminiMapping(
     unmatched: newUnmatched,
   };
 
-  console.log(`[fallback] Result: method=${newMethod}, confidence=${result.confidence}, remapped=${fallbackLog.remapped_items.length}`);
+  logger.info('fallback', 'mapping_done', `method=${newMethod} confidence=${result.confidence} remapped=${fallbackLog.remapped_items.length}`, ctx);
 
   return { result, fallbackLog };
 }

@@ -5,6 +5,7 @@ import { Bot, Context, session } from 'grammy';
 import { config } from '../config/index.js';
 import { logMeal, getDailySummary, getRecommendation, onboardUser, undoLastMeal } from './api-client.js';
 import { formatMealLogged, formatSummary, formatRecommendation, formatOnboardSuccess, formatUndo, formatStatus, formatError } from './formatter.js';
+import { logger } from '../lib/logger.js';
 
 // ─── Session (tracks onboarding state) ──────────────────────
 
@@ -34,6 +35,8 @@ export function createBot(): Bot<BotContext> {
 
   // ── /start → onboarding (step 1: goal) ───────────────────
   bot.command('start', async (ctx) => {
+    const telegramId = ctx.from?.id;
+    logger.info('bot', 'command', '/start', { user_id: String(telegramId) });
     const name = ctx.from?.first_name || 'amigo';
     ctx.session.name = name;
     ctx.session.step = 'awaiting_goal';
@@ -48,12 +51,15 @@ export function createBot(): Bot<BotContext> {
   bot.command('undo', async (ctx) => {
     const telegramId = ctx.from?.id;
     if (!telegramId) return;
+    logger.info('bot', 'command', '/undo', { user_id: String(telegramId) });
 
     try {
       const data = await undoLastMeal(telegramId);
       await ctx.reply(formatUndo(data));
     } catch (err) {
-      await ctx.reply(formatError(err instanceof Error ? err.message : 'Error desconocido'));
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      logger.error('bot', 'command_error', `/undo failed: ${msg}`, { user_id: String(telegramId) });
+      await ctx.reply(formatError(msg));
     }
   });
 
@@ -61,12 +67,15 @@ export function createBot(): Bot<BotContext> {
   bot.command('summary', async (ctx) => {
     const telegramId = ctx.from?.id;
     if (!telegramId) return;
+    logger.info('bot', 'command', '/summary', { user_id: String(telegramId) });
 
     try {
       const data = await getDailySummary(telegramId);
       await ctx.reply(formatSummary(data));
     } catch (err) {
-      await ctx.reply(formatError(err instanceof Error ? err.message : 'Error desconocido'));
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      logger.error('bot', 'command_error', `/summary failed: ${msg}`, { user_id: String(telegramId) });
+      await ctx.reply(formatError(msg));
     }
   });
 
@@ -74,12 +83,15 @@ export function createBot(): Bot<BotContext> {
   bot.command('recommend', async (ctx) => {
     const telegramId = ctx.from?.id;
     if (!telegramId) return;
+    logger.info('bot', 'command', '/recommend', { user_id: String(telegramId) });
 
     try {
       const data = await getRecommendation(telegramId);
       await ctx.reply(formatRecommendation(data));
     } catch (err) {
-      await ctx.reply(formatError(err instanceof Error ? err.message : 'Error desconocido'));
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      logger.error('bot', 'command_error', `/recommend failed: ${msg}`, { user_id: String(telegramId) });
+      await ctx.reply(formatError(msg));
     }
   });
 
@@ -87,12 +99,15 @@ export function createBot(): Bot<BotContext> {
   bot.command('status', async (ctx) => {
     const telegramId = ctx.from?.id;
     if (!telegramId) return;
+    logger.info('bot', 'command', '/status', { user_id: String(telegramId) });
 
     try {
       const data = await getDailySummary(telegramId);
       await ctx.reply(formatStatus(data));
     } catch (err) {
-      await ctx.reply(formatError(err instanceof Error ? err.message : 'Error desconocido'));
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      logger.error('bot', 'command_error', `/status failed: ${msg}`, { user_id: String(telegramId) });
+      await ctx.reply(formatError(msg));
     }
   });
 
@@ -181,11 +196,14 @@ export function createBot(): Bot<BotContext> {
       return;
     }
 
+    logger.info('bot', 'meal_text', `user=${telegramId} len=${text.length}`, { user_id: String(telegramId) });
+
     try {
       const data = await logMeal(telegramId, text);
       await ctx.reply(formatMealLogged(data));
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : 'Error desconocido';
+      logger.error('bot', 'meal_error', errMsg, { user_id: String(telegramId), meta: { text } });
       // Specific message for parsing failures
       if (errMsg.includes('parse') || errMsg.includes('empty')) {
         await ctx.reply('No entendí qué comiste. Intentá ser más específico.\nEj: "2 milanesas con ensalada"');
@@ -209,10 +227,10 @@ export async function startBot(): Promise<void> {
   const bot = createBot();
 
   bot.catch((err: { message: string }) => {
-    console.error('[bot] Error:', err.message);
+    logger.error('bot', 'grammy_error', err.message);
   });
 
-  console.log('🤖 Telegram bot starting...');
+  logger.info('bot', 'bot_start', 'Telegram bot starting (long polling)');
   await bot.start();
 }
 
@@ -220,7 +238,7 @@ export async function startBot(): Promise<void> {
 const isMain = process.argv[1]?.includes('bot/index');
 if (isMain) {
   startBot().catch((err) => {
-    console.error('❌ Failed to start bot:', err);
+    logger.error('bot', 'start_failed', err instanceof Error ? err.message : String(err));
     process.exit(1);
   });
 }

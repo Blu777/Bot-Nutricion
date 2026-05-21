@@ -1,15 +1,19 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
-import { logger } from 'hono/logger';
 import { cors } from 'hono/cors';
 import { config, validateEnv } from './config/index.js';
 import { waitForDb } from './db/client.js';
+import { logger } from './lib/logger.js';
+import { requestContext } from './api/middleware/request-context.js';
 import { mealRoutes } from './api/routes/meal.js';
 import { summaryRoutes } from './api/routes/summary.js';
 import { recommendationRoutes } from './api/routes/recommendation.js';
 import { onboardRoutes } from './api/routes/onboard.js';
 import { undoRoutes } from './api/routes/undo.js';
 import { healthRoutes } from './api/routes/health.js';
+import { metricsRoutes } from './api/routes/metrics.js';
+import { debugRoutes } from './api/routes/debug.js';
+import { adminRoutes } from './api/routes/admin.js';
 import { startBot } from './bot/index.js';
 
 validateEnv(['DATABASE_URL', 'GEMINI_API_KEY', 'TELEGRAM_BOT_TOKEN']);
@@ -19,7 +23,7 @@ await waitForDb();
 const app = new Hono();
 
 // Middleware
-app.use('*', logger());
+app.use('*', requestContext);
 app.use('*', cors());
 
 // Proxy header pass-through (for TrueNAS / Nginx reverse proxy)
@@ -31,21 +35,36 @@ app.use('*', async (c, next) => {
   await next();
 });
 
+// Global error handler — returns structured error response
+app.onError((err, c) => {
+  const requestId = (c.get('requestId' as never) as string | undefined) ?? 'unknown';
+  logger.error('api', 'unhandled_error', err.message, {
+    request_id: requestId,
+    meta: { stack: err.stack?.split('\n')[1]?.trim() },
+  });
+  return c.json(
+    { error: { type: 'SYSTEM_ERROR', message: 'Internal server error', request_id: requestId } },
+    500,
+  );
+});
+
 // Root ping
 app.get('/', (c) => {
   return c.json({ status: 'ok', service: 'nutrition-bot', version: '1.0.0' });
 });
 
-// Health + API routes
+// Routes
 app.route('/', healthRoutes);
+app.route('/', metricsRoutes);
+app.route('/', debugRoutes);
+app.route('/', adminRoutes);
 app.route('/api', mealRoutes);
 app.route('/api', summaryRoutes);
 app.route('/api', recommendationRoutes);
 app.route('/api', onboardRoutes);
 app.route('/api', undoRoutes);
 
-// Start server
-console.log(`[api] Listening on port ${config.port}`);
+logger.info('api', 'server_start', `Listening on port ${config.port}`);
 
 serve({
   fetch: app.fetch,
@@ -55,10 +74,10 @@ serve({
 // Start Telegram bot (only if token is configured)
 if (config.telegram.botToken) {
   startBot().catch((err) => {
-    console.error('[bot] Failed to start Telegram bot:', err);
+    logger.error('bot', 'start_failed', err instanceof Error ? err.message : String(err));
   });
 } else {
-  console.log('[bot] TELEGRAM_BOT_TOKEN not set, bot disabled');
+  logger.warn('bot', 'token_missing', 'TELEGRAM_BOT_TOKEN not set, bot disabled');
 }
 
 export default app;
