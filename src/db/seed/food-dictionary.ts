@@ -1,10 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
+import postgres from 'postgres';
 
-// Load env manually for seed script
-const SUPABASE_URL = process.env.SUPABASE_URL || '';
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/nutrition';
+const sql = postgres(DATABASE_URL);
 
 // ═══════════════════════════════════════════════════════════════
 // Argentine Food Dictionary — Initial Seed (~50 foods)
@@ -16,7 +13,7 @@ const foods = [
   {
     id: 'milanesa_carne',
     name: 'Milanesa de carne',
-    aliases: ['milanesa', 'mila', 'milanga', 'milanesas', 'milas', 'milangas'],
+    aliases: ['milanesa', 'mila', 'milanga', 'milanesas', 'milas', 'milangas', 'milanesita', 'milanesitas'],
     category: 'carnes',
     portion_size: 150,
     portion_unit: 'g',
@@ -28,7 +25,7 @@ const foods = [
   {
     id: 'milanesa_pollo',
     name: 'Milanesa de pollo',
-    aliases: ['milanesa de pollo', 'mila de pollo', 'milanga de pollo', 'suprema'],
+    aliases: ['milanesa de pollo', 'mila de pollo', 'milanga de pollo', 'suprema', 'supremas', 'milanesas de pollo'],
     category: 'carnes',
     portion_size: 150,
     portion_unit: 'g',
@@ -40,7 +37,7 @@ const foods = [
   {
     id: 'milanesa_napolitana',
     name: 'Milanesa napolitana',
-    aliases: ['napo', 'napolitana', 'milanesa napo'],
+    aliases: ['napo', 'napolitana', 'milanesa napo', 'mila napo', 'napolitanas'],
     category: 'carnes',
     portion_size: 250,
     portion_unit: 'g',
@@ -52,7 +49,7 @@ const foods = [
   {
     id: 'pechuga_pollo',
     name: 'Pechuga de pollo a la plancha',
-    aliases: ['pechuga', 'pollo', 'pechuga de pollo', 'pollo a la plancha', 'pollo grillado'],
+    aliases: ['pechuga', 'pollo', 'pechuga de pollo', 'pollo a la plancha', 'pollo grillado', 'pechuga grillada', 'pollo frito', 'pollo hervido'],
     category: 'carnes',
     portion_size: 200,
     portion_unit: 'g',
@@ -64,7 +61,7 @@ const foods = [
   {
     id: 'carne_asado',
     name: 'Asado (corte mixto)',
-    aliases: ['asado', 'carne', 'parrilla', 'costilla', 'vacio', 'entraña'],
+    aliases: ['asado', 'carne', 'parrilla', 'costilla', 'vacio', 'entrana', 'tira de asado', 'costillar'],
     category: 'carnes',
     portion_size: 200,
     portion_unit: 'g',
@@ -88,7 +85,7 @@ const foods = [
   {
     id: 'hamburguesa',
     name: 'Hamburguesa casera',
-    aliases: ['hamburguesa', 'hamburgesa', 'burger', 'hamburguesas'],
+    aliases: ['hamburguesa', 'hamburgesa', 'burger', 'hamburguesas', 'hambur', 'hamburgue'],
     category: 'carnes',
     portion_size: 120,
     portion_unit: 'g',
@@ -175,7 +172,7 @@ const foods = [
   {
     id: 'arroz',
     name: 'Arroz blanco cocido',
-    aliases: ['arroz', 'arroz blanco', 'arroz cocido'],
+    aliases: ['arroz', 'arroz blanco', 'arroz cocido', 'arrocito'],
     category: 'carbohidratos',
     portion_size: 200,
     portion_unit: 'g',
@@ -187,7 +184,7 @@ const foods = [
   {
     id: 'fideos',
     name: 'Fideos cocidos',
-    aliases: ['fideos', 'pasta', 'fideos cocidos', 'spaghetti', 'tallarines'],
+    aliases: ['fideos', 'pasta', 'fideos cocidos', 'spaghetti', 'tallarines', 'fideos secos', 'tallarin', 'spagueti', 'espagueti'],
     category: 'carbohidratos',
     portion_size: 200,
     portion_unit: 'g',
@@ -223,7 +220,7 @@ const foods = [
   {
     id: 'papa',
     name: 'Papa hervida',
-    aliases: ['papa', 'papas', 'papa hervida', 'papas fritas'],
+    aliases: ['papa', 'papas', 'papa hervida', 'papas fritas', 'papas al horno'],
     category: 'carbohidratos',
     portion_size: 150,
     portion_unit: 'g',
@@ -272,7 +269,7 @@ const foods = [
   {
     id: 'empanada_carne',
     name: 'Empanada de carne',
-    aliases: ['empanada', 'empanada de carne', 'empanadas'],
+    aliases: ['empanada', 'empanada de carne', 'empanadas', 'empanada frita'],
     category: 'comidas',
     portion_size: 100,
     portion_unit: 'g',
@@ -491,24 +488,450 @@ const foods = [
     is_composite: false,
     tags: ['bajo_calorias'],
   },
+  // ─── Carnes (nuevas) ──────────────────────────────────────
+  {
+    id: 'chorizo',
+    name: 'Chorizo parrillero',
+    aliases: ['chorizo', 'chorizos', 'chori', 'choris', 'chorizo parrillero'],
+    category: 'carnes',
+    portion_size: 100,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 280, protein: 14, carbs: 1, fats: 24 },
+    nutrition_per_100g: { calories: 280, protein: 14, carbs: 1, fats: 24 },
+    is_composite: false,
+    tags: ['proteina', 'alta_grasa'],
+  },
+  {
+    id: 'bife_chorizo',
+    name: 'Bife de chorizo',
+    aliases: ['bife', 'bife de chorizo', 'churrasco', 'bife angosto'],
+    category: 'carnes',
+    portion_size: 250,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 450, protein: 50, carbs: 0, fats: 28 },
+    nutrition_per_100g: { calories: 180, protein: 20, carbs: 0, fats: 11 },
+    is_composite: false,
+    tags: ['alta_proteina'],
+  },
+  {
+    id: 'bondiola',
+    name: 'Bondiola',
+    aliases: ['bondiola', 'bondiola de cerdo'],
+    category: 'carnes',
+    portion_size: 150,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 330, protein: 30, carbs: 0, fats: 23 },
+    nutrition_per_100g: { calories: 220, protein: 20, carbs: 0, fats: 15 },
+    is_composite: false,
+    tags: ['proteina', 'alta_grasa'],
+  },
+  {
+    id: 'matambre',
+    name: 'Matambre',
+    aliases: ['matambre', 'matambre arrollado', 'matambre de cerdo'],
+    category: 'carnes',
+    portion_size: 150,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 300, protein: 28, carbs: 0, fats: 20 },
+    nutrition_per_100g: { calories: 200, protein: 19, carbs: 0, fats: 13 },
+    is_composite: false,
+    tags: ['proteina'],
+  },
+  {
+    id: 'salchicha',
+    name: 'Salchicha / Pancho',
+    aliases: ['salchicha', 'salchichas', 'pancho', 'panchos', 'frankfurter'],
+    category: 'carnes',
+    portion_size: 50,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 150, protein: 6, carbs: 2, fats: 13 },
+    nutrition_per_100g: { calories: 300, protein: 12, carbs: 4, fats: 26 },
+    is_composite: false,
+    tags: ['procesado'],
+  },
+  {
+    id: 'panceta',
+    name: 'Panceta',
+    aliases: ['panceta', 'tocino', 'bacon'],
+    category: 'carnes',
+    portion_size: 40,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 170, protein: 5, carbs: 0, fats: 17 },
+    nutrition_per_100g: { calories: 425, protein: 12, carbs: 0, fats: 42 },
+    is_composite: false,
+    tags: ['alta_grasa'],
+  },
+  {
+    id: 'pollo_horno',
+    name: 'Pollo al horno',
+    aliases: ['pollo al horno', 'pata muslo', 'pata muslo de pollo', 'muslo de pollo'],
+    category: 'carnes',
+    portion_size: 200,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 320, protein: 36, carbs: 0, fats: 18 },
+    nutrition_per_100g: { calories: 160, protein: 18, carbs: 0, fats: 9 },
+    is_composite: false,
+    tags: ['proteina'],
+  },
+  {
+    id: 'milanesa_horno',
+    name: 'Milanesa al horno',
+    aliases: ['milanesa al horno', 'mila al horno', 'milanesa horno'],
+    category: 'carnes',
+    portion_size: 150,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 250, protein: 24, carbs: 12, fats: 12 },
+    nutrition_per_100g: { calories: 167, protein: 16, carbs: 8, fats: 8 },
+    is_composite: false,
+    tags: ['proteina', 'bajo_grasa'],
+  },
+  // ─── Carbohidratos (nuevos) ───────────────────────────────
+  {
+    id: 'noquis',
+    name: 'Ñoquis',
+    aliases: ['noquis', 'ñoquis', 'gnocchi'],
+    category: 'carbohidratos',
+    portion_size: 300,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 400, protein: 10, carbs: 65, fats: 10 },
+    nutrition_per_100g: { calories: 133, protein: 3, carbs: 22, fats: 3 },
+    is_composite: true,
+    tags: ['carbohidrato'],
+  },
+  {
+    id: 'ravioles',
+    name: 'Ravioles',
+    aliases: ['ravioles', 'raviolis', 'ravi', 'ravis'],
+    category: 'carbohidratos',
+    portion_size: 300,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 420, protein: 16, carbs: 55, fats: 14 },
+    nutrition_per_100g: { calories: 140, protein: 5, carbs: 18, fats: 5 },
+    is_composite: true,
+    tags: ['carbohidrato', 'comida_completa'],
+  },
+  {
+    id: 'polenta',
+    name: 'Polenta',
+    aliases: ['polenta', 'polenta con queso'],
+    category: 'carbohidratos',
+    portion_size: 250,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 280, protein: 6, carbs: 58, fats: 2 },
+    nutrition_per_100g: { calories: 112, protein: 2.5, carbs: 23, fats: 0.8 },
+    is_composite: false,
+    tags: ['carbohidrato'],
+  },
+  {
+    id: 'tortilla_papa',
+    name: 'Tortilla de papa',
+    aliases: ['tortilla', 'tortilla de papa', 'tortilla de papas', 'tortilla espanola'],
+    category: 'comidas',
+    portion_size: 200,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 300, protein: 12, carbs: 28, fats: 16 },
+    nutrition_per_100g: { calories: 150, protein: 6, carbs: 14, fats: 8 },
+    is_composite: true,
+    tags: ['comida_completa'],
+  },
+  // ─── Comidas Completas (nuevas) ───────────────────────────
+  {
+    id: 'choripan',
+    name: 'Choripán',
+    aliases: ['choripan', 'choripán', 'chori pan'],
+    category: 'comidas',
+    portion_size: 200,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 450, protein: 18, carbs: 30, fats: 28 },
+    nutrition_per_100g: null,
+    is_composite: true,
+    tags: ['comida_completa', 'alta_calorias'],
+  },
+  {
+    id: 'sandwich_jq',
+    name: 'Sándwich de jamón y queso',
+    aliases: ['sandwich', 'sanguchito', 'sanguche', 'sandwich de jamon y queso', 'sandwich jq', 'tostado'],
+    category: 'comidas',
+    portion_size: 150,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 300, protein: 16, carbs: 28, fats: 14 },
+    nutrition_per_100g: null,
+    is_composite: true,
+    tags: ['comida_completa'],
+  },
+  {
+    id: 'lomito',
+    name: 'Lomito (sándwich)',
+    aliases: ['lomito', 'lomitos', 'lomo'],
+    category: 'comidas',
+    portion_size: 300,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 550, protein: 30, carbs: 40, fats: 28 },
+    nutrition_per_100g: null,
+    is_composite: true,
+    tags: ['comida_completa', 'alta_calorias'],
+  },
+  {
+    id: 'empanada_pollo',
+    name: 'Empanada de pollo',
+    aliases: ['empanada de pollo'],
+    category: 'comidas',
+    portion_size: 100,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 240, protein: 12, carbs: 20, fats: 12 },
+    nutrition_per_100g: { calories: 240, protein: 12, carbs: 20, fats: 12 },
+    is_composite: true,
+    tags: ['comida_completa'],
+  },
+  {
+    id: 'arroz_pollo',
+    name: 'Arroz con pollo',
+    aliases: ['arroz con pollo'],
+    category: 'comidas',
+    portion_size: 350,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 420, protein: 28, carbs: 50, fats: 10 },
+    nutrition_per_100g: null,
+    is_composite: true,
+    tags: ['comida_completa', 'proteina'],
+  },
+  // ─── Lácteos (nuevos) ─────────────────────────────────────
+  {
+    id: 'dulce_leche',
+    name: 'Dulce de leche',
+    aliases: ['dulce de leche', 'ddl'],
+    category: 'dulces',
+    portion_size: 30,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 95, protein: 2, carbs: 17, fats: 2.5 },
+    nutrition_per_100g: { calories: 315, protein: 6, carbs: 56, fats: 8 },
+    is_composite: false,
+    tags: ['dulce', 'alta_calorias'],
+  },
+  {
+    id: 'manteca',
+    name: 'Manteca',
+    aliases: ['manteca', 'mantequilla'],
+    category: 'lacteos',
+    portion_size: 15,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 108, protein: 0, carbs: 0, fats: 12 },
+    nutrition_per_100g: { calories: 720, protein: 0.5, carbs: 0, fats: 81 },
+    is_composite: false,
+    tags: ['alta_grasa'],
+  },
+  {
+    id: 'queso_rallado',
+    name: 'Queso rallado',
+    aliases: ['queso rallado'],
+    category: 'lacteos',
+    portion_size: 10,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 40, protein: 4, carbs: 0, fats: 3 },
+    nutrition_per_100g: { calories: 400, protein: 36, carbs: 0, fats: 28 },
+    is_composite: false,
+    tags: ['proteina'],
+  },
+  {
+    id: 'ricota',
+    name: 'Ricota',
+    aliases: ['ricota', 'ricotta', 'queso ricota'],
+    category: 'lacteos',
+    portion_size: 100,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 130, protein: 9, carbs: 4, fats: 9 },
+    nutrition_per_100g: { calories: 130, protein: 9, carbs: 4, fats: 9 },
+    is_composite: false,
+    tags: ['proteina'],
+  },
+  // ─── Verduras (nuevas) ────────────────────────────────────
+  {
+    id: 'tomate',
+    name: 'Tomate',
+    aliases: ['tomate', 'tomates', 'ensalada de tomate'],
+    category: 'verduras',
+    portion_size: 150,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 27, protein: 1.3, carbs: 6, fats: 0.3 },
+    nutrition_per_100g: { calories: 18, protein: 0.9, carbs: 4, fats: 0.2 },
+    is_composite: false,
+    tags: ['bajo_calorias', 'fibra'],
+  },
+  {
+    id: 'lechuga',
+    name: 'Lechuga',
+    aliases: ['lechuga'],
+    category: 'verduras',
+    portion_size: 80,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 12, protein: 1, carbs: 2, fats: 0.2 },
+    nutrition_per_100g: { calories: 15, protein: 1.4, carbs: 2.9, fats: 0.2 },
+    is_composite: false,
+    tags: ['bajo_calorias'],
+  },
+  {
+    id: 'zapallo',
+    name: 'Zapallo',
+    aliases: ['zapallo', 'calabaza', 'zapallito', 'zapallitos'],
+    category: 'verduras',
+    portion_size: 200,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 50, protein: 2, carbs: 10, fats: 0.2 },
+    nutrition_per_100g: { calories: 25, protein: 1, carbs: 5, fats: 0.1 },
+    is_composite: false,
+    tags: ['bajo_calorias', 'fibra'],
+  },
+  {
+    id: 'choclo',
+    name: 'Choclo',
+    aliases: ['choclo', 'maiz', 'choclos'],
+    category: 'verduras',
+    portion_size: 150,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 135, protein: 5, carbs: 27, fats: 2 },
+    nutrition_per_100g: { calories: 90, protein: 3, carbs: 18, fats: 1.3 },
+    is_composite: false,
+    tags: ['carbohidrato'],
+  },
+  // ─── Frutas (nuevas) ──────────────────────────────────────
+  {
+    id: 'naranja',
+    name: 'Naranja',
+    aliases: ['naranja', 'naranjas', 'jugo de naranja', 'jugo'],
+    category: 'frutas',
+    portion_size: 200,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 85, protein: 1.7, carbs: 21, fats: 0.2 },
+    nutrition_per_100g: { calories: 43, protein: 0.9, carbs: 10, fats: 0.1 },
+    is_composite: false,
+    tags: ['fruta'],
+  },
+  // ─── Snacks / Dulces (nuevos) ─────────────────────────────
+  {
+    id: 'alfajor',
+    name: 'Alfajor',
+    aliases: ['alfajor', 'alfajores'],
+    category: 'snacks',
+    portion_size: 60,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 260, protein: 3, carbs: 36, fats: 12 },
+    nutrition_per_100g: { calories: 433, protein: 5, carbs: 60, fats: 20 },
+    is_composite: true,
+    tags: ['dulce', 'alta_calorias', 'snack'],
+  },
+  // ─── Bebidas (nuevas) ─────────────────────────────────────
+  {
+    id: 'gaseosa',
+    name: 'Gaseosa (vaso)',
+    aliases: ['gaseosa', 'coca', 'coca cola', 'pepsi', 'sprite'],
+    category: 'bebidas',
+    portion_size: 350,
+    portion_unit: 'ml',
+    nutrition_per_portion: { calories: 140, protein: 0, carbs: 35, fats: 0 },
+    nutrition_per_100g: null,
+    is_composite: false,
+    tags: ['bebida', 'azucar'],
+  },
+  {
+    id: 'cerveza',
+    name: 'Cerveza (pinta)',
+    aliases: ['cerveza', 'birra', 'pinta'],
+    category: 'bebidas',
+    portion_size: 500,
+    portion_unit: 'ml',
+    nutrition_per_portion: { calories: 215, protein: 2, carbs: 18, fats: 0 },
+    nutrition_per_100g: null,
+    is_composite: false,
+    tags: ['bebida', 'alcohol'],
+  },
+  {
+    id: 'vino',
+    name: 'Vino (copa)',
+    aliases: ['vino', 'vino tinto', 'vino blanco', 'copa de vino'],
+    category: 'bebidas',
+    portion_size: 150,
+    portion_unit: 'ml',
+    nutrition_per_portion: { calories: 125, protein: 0, carbs: 4, fats: 0 },
+    nutrition_per_100g: null,
+    is_composite: false,
+    tags: ['bebida', 'alcohol'],
+  },
+  // ─── Proteína (suplementos) ───────────────────────────────
+  {
+    id: 'scoop_proteina',
+    name: 'Scoop de proteína',
+    aliases: ['scoop de proteina', 'proteina', 'whey', 'scoop'],
+    category: 'suplementos',
+    portion_size: 30,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 120, protein: 24, carbs: 3, fats: 1.5 },
+    nutrition_per_100g: { calories: 400, protein: 80, carbs: 10, fats: 5 },
+    is_composite: false,
+    tags: ['alta_proteina', 'suplemento'],
+  },
+  // ─── Pattern 1 fixes: standalone foods that appear after con-split ─
+  {
+    id: 'jamon',
+    name: 'Jamón cocido',
+    aliases: ['jamon', 'jamón', 'jamon cocido', 'jamon crudo'],
+    category: 'carnes',
+    portion_size: 40,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 55, protein: 9, carbs: 1, fats: 2 },
+    nutrition_per_100g: { calories: 138, protein: 22, carbs: 2, fats: 5 },
+    is_composite: false,
+    tags: ['proteina', 'bajo_grasa'],
+  },
+  {
+    id: 'verduras_mixtas',
+    name: 'Verduras mixtas',
+    aliases: ['verduras', 'verdura', 'verduritas', 'vegetales', 'verduras grilladas', 'verduras al vapor'],
+    category: 'verduras',
+    portion_size: 200,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 60, protein: 3, carbs: 10, fats: 0.5 },
+    nutrition_per_100g: { calories: 30, protein: 1.5, carbs: 5, fats: 0.3 },
+    is_composite: false,
+    tags: ['bajo_calorias', 'fibra'],
+  },
 ];
 
 async function seed() {
   console.log('🌱 Seeding food dictionary...');
   console.log(`   Inserting ${foods.length} foods...`);
 
-  const { data, error } = await supabase
-    .from('food_dictionary')
-    .upsert(foods, { onConflict: 'id' })
-    .select();
-
-  if (error) {
-    console.error('❌ Seed failed:', error.message);
+  try {
+    for (const food of foods) {
+      await sql`
+        INSERT INTO food_dictionary
+          (id, name, aliases, category, portion_size, portion_unit,
+           nutrition_per_portion, nutrition_per_100g, is_composite, tags)
+        VALUES (
+          ${food.id},
+          ${food.name},
+          ${sql.array(food.aliases)},
+          ${food.category ?? null},
+          ${food.portion_size},
+          ${food.portion_unit},
+          ${sql.json(food.nutrition_per_portion)},
+          ${food.nutrition_per_100g ? sql.json(food.nutrition_per_100g) : null},
+          ${food.is_composite},
+          ${sql.array(food.tags)}
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          name                  = EXCLUDED.name,
+          aliases               = EXCLUDED.aliases,
+          nutrition_per_portion = EXCLUDED.nutrition_per_portion,
+          nutrition_per_100g    = EXCLUDED.nutrition_per_100g
+      `;
+    }
+    console.log(`✅ Successfully seeded ${foods.length} foods`);
+  } catch (err) {
+    console.error('❌ Seed failed:', err);
     process.exit(1);
+  } finally {
+    await sql.end();
   }
-
-  console.log(`✅ Successfully seeded ${data.length} foods`);
-  process.exit(0);
 }
 
 seed();

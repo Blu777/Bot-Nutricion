@@ -1,4 +1,4 @@
-import { supabase } from '../client.js';
+import { sql } from '../client.js';
 
 export type EventType =
   | 'onboard_started'
@@ -15,11 +15,10 @@ export async function trackEvent(
   metadata: Record<string, unknown> = {},
 ): Promise<void> {
   try {
-    await supabase.from('events').insert({
-      user_id: userId,
-      type,
-      metadata,
-    });
+    await sql`
+      INSERT INTO events (user_id, type, metadata)
+      VALUES (${userId}, ${type}, ${sql.json(metadata as any)})
+    `;
   } catch (err) {
     // Never let analytics tracking break the main flow
     console.error('[events] Failed to track:', type, err);

@@ -80,6 +80,106 @@ const dictionary: FoodEntry[] = [
     nutrition_per_portion: { calories: 50, protein: 2, carbs: 8, fats: 1 },
     nutrition_per_100g: null, is_composite: false, tags: [],
   },
+  // ── New foods for expanded tests ────────────────────────────
+  {
+    id: 'chorizo', name: 'Chorizo parrillero',
+    aliases: ['chorizo', 'chorizos', 'chori', 'choris', 'chorizo parrillero'],
+    category: 'carnes', portion_size: 100, portion_unit: 'g',
+    nutrition_per_portion: { calories: 280, protein: 14, carbs: 1, fats: 24 },
+    nutrition_per_100g: null, is_composite: false, tags: [],
+  },
+  {
+    id: 'bife_chorizo', name: 'Bife de chorizo',
+    aliases: ['bife', 'bife de chorizo', 'churrasco', 'bife angosto'],
+    category: 'carnes', portion_size: 250, portion_unit: 'g',
+    nutrition_per_portion: { calories: 450, protein: 50, carbs: 0, fats: 28 },
+    nutrition_per_100g: null, is_composite: false, tags: [],
+  },
+  {
+    id: 'milanesa_napolitana', name: 'Milanesa napolitana',
+    aliases: ['napo', 'napolitana', 'milanesa napo', 'mila napo', 'napolitanas'],
+    category: 'carnes', portion_size: 250, portion_unit: 'g',
+    nutrition_per_portion: { calories: 480, protein: 30, carbs: 18, fats: 28 },
+    nutrition_per_100g: null, is_composite: true, tags: [],
+  },
+  {
+    id: 'alfajor', name: 'Alfajor',
+    aliases: ['alfajor', 'alfajores'],
+    category: 'snacks', portion_size: 60, portion_unit: 'g',
+    nutrition_per_portion: { calories: 260, protein: 3, carbs: 36, fats: 12 },
+    nutrition_per_100g: null, is_composite: true, tags: [],
+  },
+  {
+    id: 'arroz', name: 'Arroz blanco cocido',
+    aliases: ['arroz', 'arroz blanco', 'arroz cocido'],
+    category: 'carbohidratos', portion_size: 200, portion_unit: 'g',
+    nutrition_per_portion: { calories: 260, protein: 5, carbs: 58, fats: 0.5 },
+    nutrition_per_100g: null, is_composite: false, tags: [],
+  },
+  {
+    id: 'pechuga_pollo', name: 'Pechuga de pollo a la plancha',
+    aliases: ['pechuga', 'pollo', 'pechuga de pollo', 'pollo a la plancha', 'pollo grillado'],
+    category: 'carnes', portion_size: 200, portion_unit: 'g',
+    nutrition_per_portion: { calories: 240, protein: 46, carbs: 0, fats: 5 },
+    nutrition_per_100g: null, is_composite: false, tags: [],
+  },
+  {
+    id: 'cerveza', name: 'Cerveza (pinta)',
+    aliases: ['cerveza', 'birra', 'pinta'],
+    category: 'bebidas', portion_size: 500, portion_unit: 'ml',
+    nutrition_per_portion: { calories: 215, protein: 2, carbs: 18, fats: 0 },
+    nutrition_per_100g: null, is_composite: false, tags: [],
+  },
+  {
+    id: 'noquis', name: 'Ñoquis',
+    aliases: ['noquis', 'ñoquis', 'gnocchi'],
+    category: 'carbohidratos', portion_size: 300, portion_unit: 'g',
+    nutrition_per_portion: { calories: 400, protein: 10, carbs: 65, fats: 10 },
+    nutrition_per_100g: null, is_composite: true, tags: [],
+  },
+  {
+    id: 'ravioles', name: 'Ravioles',
+    aliases: ['ravioles', 'raviolis', 'ravi', 'ravis'],
+    category: 'carbohidratos', portion_size: 300, portion_unit: 'g',
+    nutrition_per_portion: { calories: 420, protein: 16, carbs: 55, fats: 14 },
+    nutrition_per_100g: null, is_composite: true, tags: [],
+  },
+  {
+    id: 'arroz_pollo', name: 'Arroz con pollo',
+    aliases: ['arroz con pollo'],
+    category: 'comidas', portion_size: 350, portion_unit: 'g',
+    nutrition_per_portion: { calories: 420, protein: 28, carbs: 50, fats: 10 },
+    nutrition_per_100g: null, is_composite: true, tags: [],
+  },
+  {
+    id: 'salchicha', name: 'Salchicha / Pancho',
+    aliases: ['salchicha', 'salchichas', 'pancho', 'panchos'],
+    category: 'carnes', portion_size: 50, portion_unit: 'g',
+    nutrition_per_portion: { calories: 150, protein: 6, carbs: 2, fats: 13 },
+    nutrition_per_100g: null, is_composite: false, tags: [],
+  },
+  // ── Failure pattern test entries ────────────────────────────
+  {
+    id: 'jamon', name: 'Jamón cocido',
+    aliases: ['jamon', 'jamon cocido', 'jamon crudo'],
+    category: 'carnes', portion_size: 40, portion_unit: 'g',
+    nutrition_per_portion: { calories: 55, protein: 9, carbs: 1, fats: 2 },
+    nutrition_per_100g: null, is_composite: false, tags: [],
+  },
+  {
+    id: 'verduras_mixtas', name: 'Verduras mixtas',
+    aliases: ['verduras', 'verdura', 'verduritas', 'vegetales'],
+    category: 'verduras', portion_size: 200, portion_unit: 'g',
+    nutrition_per_portion: { calories: 60, protein: 3, carbs: 10, fats: 0.5 },
+    nutrition_per_100g: null, is_composite: false, tags: [],
+  },
+  {
+    id: 'papa', name: 'Papa hervida',
+    aliases: ['papa', 'papas', 'papas fritas', 'papas al horno', 'papa frita'],
+    category: 'carbohidratos', portion_size: 150, portion_unit: 'g',
+    nutrition_per_portion: { calories: 130, protein: 3, carbs: 28, fats: 0.5 },
+    nutrition_per_100g: null, is_composite: false, tags: [],
+  },
 ];
 
 // ─── Test Cases ──────────────────────────────────────────────
@@ -148,6 +248,126 @@ const tests: TestCase[] = [
     expectItems: 1,
     expectMatched: ['empanada_carne'],
     expectQty: { empanada_carne: 3 },
+  },
+  // ── New: slang expansion ─────────────────────────────────────
+  {
+    input: '2 choris',
+    expectItems: 1,
+    expectMatched: ['chorizo'],
+    expectQty: { chorizo: 2 },
+  },
+  {
+    input: 'mila napo con pure',
+    expectItems: 2,
+    expectMatched: ['milanesa_napolitana', 'pure_papa'],
+  },
+  {
+    input: 'bife con ensalada',
+    expectItems: 2,
+    expectMatched: ['bife_chorizo', 'ensalada_mixta'],
+  },
+  // ── New: "+" separator ───────────────────────────────────────
+  {
+    input: 'arroz + pollo',
+    expectItems: 2,
+    expectMatched: ['arroz', 'pechuga_pollo'],
+  },
+  // ── New: compound phrase preserved ───────────────────────────
+  {
+    input: 'arroz con pollo',
+    expectItems: 1,
+    expectMatched: ['arroz_pollo'],
+  },
+  // ── New: vague quantity ──────────────────────────────────────
+  {
+    input: 'algo de arroz',
+    expectItems: 1,
+    expectMatched: ['arroz'],
+    expectQty: { arroz: 1 },
+  },
+  // ── New: birra slang ─────────────────────────────────────────
+  {
+    input: 'una birra',
+    expectItems: 1,
+    expectMatched: ['cerveza'],
+  },
+  // ── New: ñoquis with accent ──────────────────────────────────
+  {
+    input: 'ñoquis',
+    expectItems: 1,
+    expectMatched: ['noquis'],
+  },
+  // ── New: pancho slang ────────────────────────────────────────
+  {
+    input: '2 panchos',
+    expectItems: 1,
+    expectMatched: ['salchicha'],
+    expectQty: { salchicha: 2 },
+  },
+  // ── New: alfajor ─────────────────────────────────────────────
+  {
+    input: '2 alfajores',
+    expectItems: 1,
+    expectMatched: ['alfajor'],
+    expectQty: { alfajor: 2 },
+  },
+  // ── New: ravioles slang ──────────────────────────────────────
+  {
+    input: 'ravis',
+    expectItems: 1,
+    expectMatched: ['ravioles'],
+  },
+  // ═══ FAILURE PATTERN TESTS ═══════════════════════════════════
+  // Pattern 1: con-split leaves orphan foods
+  {
+    input: 'pollo con verduras',
+    expectItems: 2,
+    expectMatched: ['pechuga_pollo', 'verduras_mixtas'],
+  },
+  {
+    input: 'huevos con jamon',
+    expectItems: 2,
+    expectMatched: ['huevo', 'jamon'],
+  },
+  {
+    input: 'milanesa con fritas',
+    expectItems: 2,
+    expectMatched: ['milanesa_carne', 'papa'],
+  },
+  // Pattern 2: diminutives
+  {
+    input: 'pollito con arrocito',
+    expectItems: 2,
+    expectMatched: ['pechuga_pollo', 'arroz'],
+  },
+  // Pattern 3: verb prefix
+  {
+    input: 'comi 2 empanadas',
+    expectItems: 1,
+    expectMatched: ['empanada_carne'],
+    expectQty: { empanada_carne: 2 },
+  },
+  {
+    input: 'almorce milanesa con pure',
+    expectItems: 2,
+    expectMatched: ['milanesa_carne', 'pure_papa'],
+  },
+  // Pattern 4: cooking modifier as alias
+  {
+    input: 'pollo frito',
+    expectItems: 1,
+    expectMatched: ['pechuga_pollo'],
+  },
+  // Pattern 5: spelling variants
+  {
+    input: 'espagueti',
+    expectItems: 1,
+    expectMatched: ['fideos'],
+  },
+  {
+    input: 'tallarin',
+    expectItems: 1,
+    expectMatched: ['fideos'],
   },
 ];
 

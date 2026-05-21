@@ -39,21 +39,27 @@ export function matchFood(foodText: string, dictionary: FoodEntry[]): MatchResul
   }
 
   // 3. Contains match (input contains alias or alias contains input)
-  // Only match when lengths are reasonably close to avoid false positives
+  // Tightened: require minimum length >= 4, and length ratio >= 0.5 to avoid
+  // false positives like "pan" matching inside "empanada"
   let bestPartial: { food: FoodEntry; confidence: number } | null = null;
   for (const food of dictionary) {
     for (const alias of food.aliases) {
       const normalizedAlias = normalize(alias);
       if (normalizedAlias === normalized) continue; // already checked
 
-      if (normalized.includes(normalizedAlias) && normalizedAlias.length >= 3) {
+      // Input contains alias: "pollo grillado" contains "pollo"
+      if (normalized.includes(normalizedAlias) && normalizedAlias.length >= 4) {
         const ratio = normalizedAlias.length / normalized.length;
+        if (ratio < 0.4) continue; // alias is too small relative to input
         const conf = 0.7 + ratio * 0.15; // 0.7-0.85
         if (!bestPartial || conf > bestPartial.confidence) {
           bestPartial = { food, confidence: Math.min(conf, 0.85) };
         }
-      } else if (normalizedAlias.includes(normalized) && normalized.length >= 3) {
+      }
+      // Alias contains input: alias "pollo a la plancha" contains "pollo"
+      else if (normalizedAlias.includes(normalized) && normalized.length >= 4) {
         const ratio = normalized.length / normalizedAlias.length;
+        if (ratio < 0.4) continue; // input is too small relative to alias
         const conf = 0.6 + ratio * 0.2; // 0.6-0.8
         if (!bestPartial || conf > bestPartial.confidence) {
           bestPartial = { food, confidence: Math.min(conf, 0.8) };
@@ -65,17 +71,21 @@ export function matchFood(foodText: string, dictionary: FoodEntry[]): MatchResul
     return { food: bestPartial.food, confidence: bestPartial.confidence, originalText: foodText };
   }
 
-  // 4. Levenshtein fuzzy match (threshold: distance ≤ 2 for short words, ≤ 3 for longer)
+  // 4. Levenshtein fuzzy match
+  // Tightened: max distance ≤ 2 always, and distance must be < 30% of word length
+  // This prevents "ensalada" (8) matching "empanada" (8) at distance 3
   let bestFuzzy: { food: FoodEntry; confidence: number; distance: number } | null = null;
-  const maxDistance = normalized.length <= 6 ? 2 : 3;
+  const maxDistance = normalized.length <= 5 ? 1 : 2;
 
   for (const food of dictionary) {
     const candidates = [...food.aliases, food.name];
     for (const candidate of candidates) {
       const normalizedCandidate = normalize(candidate);
+      // Skip candidates with very different lengths
+      if (Math.abs(normalized.length - normalizedCandidate.length) > maxDistance) continue;
       const dist = levenshtein(normalized, normalizedCandidate);
-      if (dist <= maxDistance && dist < normalized.length * 0.5) {
-        const confidence = Math.max(0.5, 0.85 - dist * 0.12);
+      if (dist <= maxDistance && dist < normalized.length * 0.3) {
+        const confidence = Math.max(0.5, 0.85 - dist * 0.15);
         if (!bestFuzzy || dist < bestFuzzy.distance) {
           bestFuzzy = { food, confidence, distance: dist };
         }
@@ -109,9 +119,20 @@ function getVariants(word: string): string[] {
   if (word.endsWith('es') && word.length > 3) {
     variants.push(word.slice(0, -2));
   }
+  // "tallarines" → "tallarin" (drop "es" from -ines words)
+  if (word.endsWith('ines') && word.length > 5) {
+    variants.push(word.slice(0, -2));  // "tallarines" → "tallarine"
+    variants.push(word.slice(0, -2).slice(0, -1)); // "tallarine" → "tallarin"... not right
+    // Better: "tallarines" → "tallarin"
+    variants.push(word.slice(0, -3) + 'n'); // "tallarin" (remove "nes", add "n")
+  }
   // Pluralize: "milanesa" → "milanesas"
   if (!word.endsWith('s')) {
     variants.push(word + 's');
+    // Also try adding "es" for words ending in consonants
+    if (/[nlr]$/.test(word)) {
+      variants.push(word + 'es');
+    }
   }
 
   // Multi-word: depluralize last word only

@@ -21,6 +21,7 @@ const UNIT_MAP: Record<string, { unit: Token['unit']; gramsMultiplier?: number }
 const WORD_NUMBERS: Record<string, number> = {
   'un': 1, 'una': 1, 'uno': 1,
   'unos': 1, 'unas': 1,
+  'algo': 1, 'poquito': 1, 'poco': 1,
   'medio': 0.5, 'media': 0.5,
   'dos': 2, 'tres': 3, 'cuatro': 4, 'cinco': 5,
   'seis': 6, 'siete': 7, 'ocho': 8, 'nueve': 9, 'diez': 10,

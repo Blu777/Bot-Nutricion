@@ -1,4 +1,4 @@
-import { supabase } from '../client.js';
+import { sql } from '../client.js';
 import type { Meal, ParsedItem, NutritionValues } from '../../types/index.js';
 
 export async function createMeal(params: {
@@ -10,47 +10,42 @@ export async function createMeal(params: {
   confidence: number;
   date: string;
 }): Promise<Meal> {
-  const { data, error } = await supabase
-    .from('meals')
-    .insert(params)
-    .select()
-    .single();
-
-  if (error) throw new Error(`Failed to create meal: ${error.message}`);
-  return data as Meal;
+  const rows = await sql<Meal[]>`
+    INSERT INTO meals (user_id, raw_text, parsed_items, nutrition, parse_method, confidence, date)
+    VALUES (
+      ${params.user_id},
+      ${params.raw_text},
+      ${sql.json(params.parsed_items as any)},
+      ${sql.json(params.nutrition as any)},
+      ${params.parse_method},
+      ${params.confidence},
+      ${params.date}
+    )
+    RETURNING *
+  `;
+  if (!rows[0]) throw new Error('Failed to create meal');
+  return rows[0];
 }
 
 export async function getMealsByUserAndDate(userId: string, date: string): Promise<Meal[]> {
-  const { data, error } = await supabase
-    .from('meals')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', date)
-    .order('logged_at', { ascending: true });
-
-  if (error) throw new Error(`Failed to fetch meals: ${error.message}`);
-  return (data || []) as Meal[];
+  const rows = await sql<Meal[]>`
+    SELECT * FROM meals
+    WHERE user_id = ${userId} AND date = ${date}
+    ORDER BY logged_at ASC
+  `;
+  return rows;
 }
 
 export async function getLastMeal(userId: string, date: string): Promise<Meal | null> {
-  const { data, error } = await supabase
-    .from('meals')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('date', date)
-    .order('logged_at', { ascending: false })
-    .limit(1)
-    .single();
-
-  if (error || !data) return null;
-  return data as Meal;
+  const rows = await sql<Meal[]>`
+    SELECT * FROM meals
+    WHERE user_id = ${userId} AND date = ${date}
+    ORDER BY logged_at DESC
+    LIMIT 1
+  `;
+  return rows[0] ?? null;
 }
 
 export async function deleteMeal(mealId: string): Promise<void> {
-  const { error } = await supabase
-    .from('meals')
-    .delete()
-    .eq('id', mealId);
-
-  if (error) throw new Error(`Failed to delete meal: ${error.message}`);
+  await sql`DELETE FROM meals WHERE id = ${mealId}`;
 }
