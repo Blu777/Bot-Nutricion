@@ -7,6 +7,8 @@ import { getUserByTelegramId } from '../../db/queries/users.js';
 import { createMeal } from '../../db/queries/meals.js';
 import { getOrCreateDailyLog, updateDailyLog } from '../../db/queries/daily-logs.js';
 import { getAllFoods } from '../../db/queries/food-dictionary.js';
+import { trackEvent } from '../../db/queries/events.js';
+import { trackUnknownFood } from '../../db/queries/unknown-foods.js';
 import type { LogMealRequest, FoodEntry, NutritionValues } from '../../types/index.js';
 
 const mealRoutes = new Hono();
@@ -58,9 +60,16 @@ mealRoutes.post('/log-meal', async (c) => {
     initialParseResult,
     parseLog,
     dictionary,
+    user.id,
   );
   if (fallbackLog.triggered) {
     console.log('[fallback]', JSON.stringify(fallbackLog));
+  }
+
+  // 3c. Guard: if parser returned zero items, return error
+  if (parseResult.items.length === 0) {
+    trackEvent(user.id, 'parse_failure', { raw_text: body.text, confidence: 0 });
+    return c.json({ error: 'No pude interpretar la comida. Intentá ser más específico.' }, 422);
   }
 
   // 4. Calculate nutrition
@@ -126,6 +135,30 @@ mealRoutes.post('/log-meal', async (c) => {
     recommendation,
     message,
   };
+
+  // 13. Track events (fire-and-forget)
+  trackEvent(user.id, 'log_meal', {
+    raw_text: body.text,
+    confidence: parseResult.confidence,
+    method: parseResult.method,
+    items_count: parseResult.items.length,
+    unmatched: parseResult.unmatched,
+    gemini_used: fallbackLog.triggered,
+  });
+
+  if (fallbackLog.triggered) {
+    trackEvent(user.id, 'gemini_usage', {
+      reason: fallbackLog.reason,
+      called: fallbackLog.gemini_called,
+      remapped: fallbackLog.remapped_items,
+    });
+  }
+
+  // Track unknown foods
+  for (const term of parseResult.unmatched) {
+    trackUnknownFood(term, user.id, body.text);
+    trackEvent(user.id, 'unknown_food', { term, raw_text: body.text });
+  }
 
   return c.json(response, 201);
 });

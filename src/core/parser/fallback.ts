@@ -6,6 +6,7 @@
 
 import { callGemini } from './gemini.js';
 import { matchFood } from './matcher.js';
+import { isRateLimited, markGeminiCall, getCachedResult, setCachedResult } from './gemini-limiter.js';
 import type { ParseResult, ParsedItem, FoodEntry } from '../../types/index.js';
 import type { ParseLog } from './index.js';
 
@@ -24,6 +25,7 @@ export async function applyGeminiFallback(
   parseResult: ParseResult,
   parseLog: ParseLog,
   dictionary: FoodEntry[],
+  userId?: string,
 ): Promise<{ result: ParseResult; fallbackLog: FallbackLog }> {
   const fallbackLog: FallbackLog = {
     triggered: false,
@@ -53,8 +55,30 @@ export async function applyGeminiFallback(
 
   console.log(`[fallback] Triggering Gemini fallback: ${fallbackLog.reason}`);
 
+  // Rate limiting check
+  if (userId && isRateLimited(userId)) {
+    console.log(`[fallback] Rate limited for user ${userId}, skipping Gemini`);
+    return { result: parseResult, fallbackLog };
+  }
+
+  // Check cache
+  const cached = getCachedResult(parseLog.normalized);
+  if (cached) {
+    console.log('[fallback] Using cached Gemini result');
+    const geminiResult = cached as Awaited<ReturnType<typeof callGemini>>;
+    if (geminiResult && geminiResult.foods.length > 0) {
+      fallbackLog.gemini_called = false; // cached, not a real call
+      return applyGeminiMapping(geminiResult, parseResult, dictionary, fallbackLog);
+    }
+    return { result: parseResult, fallbackLog };
+  }
+
   // Call Gemini
+  if (userId) markGeminiCall(userId);
   const geminiResult = await callGemini(parseLog.normalized, parseResult.unmatched);
+
+  // Cache the result
+  setCachedResult(parseLog.normalized, geminiResult);
 
   if (!geminiResult || geminiResult.foods.length === 0) {
     console.log('[fallback] Gemini returned no usable results');
@@ -63,6 +87,15 @@ export async function applyGeminiFallback(
   }
 
   fallbackLog.gemini_called = true;
+  return applyGeminiMapping(geminiResult, parseResult, dictionary, fallbackLog);
+}
+
+function applyGeminiMapping(
+  geminiResult: NonNullable<Awaited<ReturnType<typeof callGemini>>>,
+  parseResult: ParseResult,
+  dictionary: FoodEntry[],
+  fallbackLog: FallbackLog,
+): { result: ParseResult; fallbackLog: FallbackLog } {
   fallbackLog.gemini_response = geminiResult.foods.map((f) => ({
     original_text: f.original_text,
     suggested_food_id: f.suggested_food_id,
@@ -76,14 +109,12 @@ export async function applyGeminiFallback(
   const resolvedUnmatched: Set<string> = new Set();
 
   for (const geminiFood of geminiResult.foods) {
-    // Find the corresponding unmatched item in parseResult
     const unmatchedIndex = updatedItems.findIndex(
       (item) => !item.matched && matchesOriginalText(item, geminiFood.original_text)
     );
 
     if (unmatchedIndex === -1) continue;
 
-    // Try to map Gemini's suggestion to our dictionary
     const mapped = mapToLocalDictionary(geminiFood, dictionary);
     if (!mapped) continue;
 

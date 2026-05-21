@@ -7,6 +7,7 @@ import { mealRoutes } from './api/routes/meal.js';
 import { summaryRoutes } from './api/routes/summary.js';
 import { recommendationRoutes } from './api/routes/recommendation.js';
 import { onboardRoutes } from './api/routes/onboard.js';
+import { undoRoutes } from './api/routes/undo.js';
 import { startBot } from './bot/index.js';
 
 const app = new Hono();
@@ -25,6 +26,7 @@ app.route('/api', mealRoutes);
 app.route('/api', summaryRoutes);
 app.route('/api', recommendationRoutes);
 app.route('/api', onboardRoutes);
+app.route('/api', undoRoutes);
 
 // Start server
 console.log(`🚀 Nutrition Bot API running on port ${config.port}`);

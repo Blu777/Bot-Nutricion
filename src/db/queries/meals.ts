@@ -31,3 +31,26 @@ export async function getMealsByUserAndDate(userId: string, date: string): Promi
   if (error) throw new Error(`Failed to fetch meals: ${error.message}`);
   return (data || []) as Meal[];
 }
+
+export async function getLastMeal(userId: string, date: string): Promise<Meal | null> {
+  const { data, error } = await supabase
+    .from('meals')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('date', date)
+    .order('logged_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error || !data) return null;
+  return data as Meal;
+}
+
+export async function deleteMeal(mealId: string): Promise<void> {
+  const { error } = await supabase
+    .from('meals')
+    .delete()
+    .eq('id', mealId);
+
+  if (error) throw new Error(`Failed to delete meal: ${error.message}`);
+}

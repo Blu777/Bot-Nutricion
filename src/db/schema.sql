@@ -69,6 +69,34 @@ CREATE TABLE daily_logs (
 
 CREATE INDEX idx_daily_logs_user_date ON daily_logs(user_id, date);
 
+-- ─── Events (Analytics) ────────────────────────────────────────
+
+CREATE TABLE events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  type TEXT NOT NULL,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_events_user ON events(user_id);
+CREATE INDEX idx_events_type ON events(type);
+CREATE INDEX idx_events_created ON events(created_at DESC);
+
+-- ─── Unknown Foods Tracking ──────────────────────────────────
+
+CREATE TABLE unknown_foods (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  term TEXT NOT NULL,
+  user_id UUID REFERENCES users(id),
+  raw_input TEXT,
+  occurrences INTEGER DEFAULT 1,
+  first_seen TIMESTAMPTZ DEFAULT NOW(),
+  last_seen TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX idx_unknown_foods_term ON unknown_foods(term);
+
 -- ─── Triggers ────────────────────────────────────────────────
 
 -- Auto-update updated_at

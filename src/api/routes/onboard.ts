@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { getUserByTelegramId, createUser } from '../../db/queries/users.js';
 import { calculateTargets } from '../../core/nutrition/targets.js';
 import { config } from '../../config/index.js';
+import { trackEvent } from '../../db/queries/events.js';
 import type { UserGoal, ActivityLevel } from '../../types/index.js';
 
 const onboardRoutes = new Hono();
@@ -20,6 +21,8 @@ onboardRoutes.post('/onboard', async (c) => {
   if (!body.telegram_id || !body.weight_kg) {
     return c.json({ error: 'telegram_id and weight_kg are required' }, 400);
   }
+
+  trackEvent(null, 'onboard_started', { telegram_id: body.telegram_id });
 
   // Check if user already exists
   const existing = await getUserByTelegramId(body.telegram_id);
@@ -40,6 +43,13 @@ onboardRoutes.post('/onboard', async (c) => {
     targets,
     timezone: config.defaults.timezone,
     onboarded: true,
+  });
+
+  trackEvent(user.id, 'onboard_completed', {
+    weight_kg: body.weight_kg,
+    goal,
+    activity_level: activityLevel,
+    targets,
   });
 
   return c.json({

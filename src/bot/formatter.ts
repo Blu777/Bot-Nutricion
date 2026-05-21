@@ -1,17 +1,26 @@
 // ─── Telegram Message Formatter ──────────────────────────────
 // Formats API responses into short, natural Spanish messages.
 
-import type { LogMealApiResponse, SummaryApiResponse, RecommendApiResponse } from './api-client.js';
+import type { LogMealApiResponse, SummaryApiResponse, RecommendApiResponse, UndoMealApiResponse } from './api-client.js';
 
 export function formatMealLogged(data: LogMealApiResponse): string {
   const { meal, daily, recommendation } = data;
 
-  const items = meal.items.map((i) => `• ${i.qty}x ${i.name}`).join('\n');
-  const estimated = meal.estimated ? '\n⚠️ Algunos items fueron estimados.' : '';
+  const items = meal.items.map((i) => {
+    const mark = i.matched ? '•' : '•❓';
+    return `${mark} ${i.qty}x ${i.name}`;
+  }).join('\n');
 
-  let msg = `✅ Registrado:\n${items}${estimated}`;
+  let msg = `✅ Registrado:\n${items}`;
+
+  // Show clearer unmatched warning with item names
+  if (meal.unmatched.length > 0) {
+    msg += `\n\n⚠️ No reconocí: "${meal.unmatched.join('", "')}"`;
+    msg += `\nLos estimé con valores genéricos.`;
+  }
+
   msg += `\n\n🥩 +${meal.total.protein}g prot · +${meal.total.calories} cal`;
-  msg += `\n\n📊 Hoy: ${daily.consumed.protein}/${daily.targets.protein}g prot · ${daily.consumed.calories}/${daily.targets.calories} cal`;
+  msg += `\n📊 Hoy: ${daily.consumed.protein}/${daily.targets.protein}g prot · ${daily.consumed.calories}/${daily.targets.calories} cal`;
 
   if (daily.remaining.protein > 0) {
     msg += `\nFaltan: ${daily.remaining.protein}g prot, ${daily.remaining.calories} cal`;
@@ -53,7 +62,34 @@ export function formatOnboardSuccess(targets: { calories: number; protein: numbe
   msg += `\n• ${targets.protein}g proteína`;
   msg += `\n• ${targets.carbs}g carbos`;
   msg += `\n• ${targets.fats}g grasas`;
-  msg += `\n\nAhora mandame lo que comiste y te lo registro. Ejemplo: "2 milanesas con puré"`;
+  msg += `\n\nMandame lo que comiste y te lo registro.`;
+  msg += `\nEj: "2 milanesas con puré"`;
+  return msg;
+}
+
+export function formatStatus(data: SummaryApiResponse): string {
+  const { totals, targets } = data;
+  const protRemaining = Math.max(0, targets.protein - totals.protein);
+  const calRemaining = Math.max(0, targets.calories - totals.calories);
+
+  let msg = `📊 ${totals.protein}/${targets.protein}g prot · ${totals.calories}/${targets.calories} cal`;
+
+  if (protRemaining > 0) {
+    msg += `\nTe faltan ~${protRemaining}g prot y ~${calRemaining} cal`;
+  } else {
+    msg += `\n🎯 ¡Proteína completa!`;
+    if (calRemaining > 0) {
+      msg += ` Faltan ~${calRemaining} cal`;
+    }
+  }
+
+  return msg;
+}
+
+export function formatUndo(data: UndoMealApiResponse): string {
+  let msg = `↩️ Deshecho: "${data.undone.text}"`;
+  msg += `\n(-${data.undone.nutrition.protein}g prot, -${data.undone.nutrition.calories} cal)`;
+  msg += `\n\n📊 Hoy: ${data.daily.consumed.protein}/${data.daily.targets.protein}g prot · ${data.daily.consumed.calories}/${data.daily.targets.calories} cal`;
   return msg;
 }
 
@@ -61,5 +97,17 @@ export function formatError(error: string): string {
   if (error.includes('User not found') || error.includes('onboarding')) {
     return '⚠️ No tenés perfil creado. Usá /start para configurar tu cuenta.';
   }
-  return `❌ Error: ${error}`;
+  if (error.includes('No hay comidas')) {
+    return '⚠️ No hay comidas registradas hoy para deshacer.';
+  }
+  if (error.includes('No pude interpretar') || error.includes('interpretar')) {
+    return '🤔 No entendí qué comiste. Intentá ser más específico.\nEj: "pollo con arroz" en vez de "comida"';
+  }
+  if (error.includes('fetch') || error.includes('ECONNREFUSED') || error.includes('network')) {
+    return '❌ No pude conectar con el servidor. Intentá de nuevo en unos segundos.';
+  }
+  if (error.includes('API error 5') || error.includes('500')) {
+    return '❌ Error del servidor. Intentá de nuevo en un momento.';
+  }
+  return `❌ Algo salió mal. Intentá de nuevo o usá /summary para ver tu estado.`;
 }

@@ -79,11 +79,16 @@ export async function getRecommendation(telegramId: number): Promise<RecommendAp
   return res.json() as Promise<RecommendApiResponse>;
 }
 
-export async function onboardUser(telegramId: number, name: string, weightKg: number): Promise<OnboardApiResponse> {
+export async function onboardUser(
+  telegramId: number,
+  name: string,
+  weightKg: number,
+  goal?: string,
+): Promise<OnboardApiResponse> {
   const res = await fetch(`${BASE}/api/onboard`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ telegram_id: telegramId, name, weight_kg: weightKg }),
+    body: JSON.stringify({ telegram_id: telegramId, name, weight_kg: weightKg, goal }),
   });
 
   if (!res.ok) {
@@ -92,4 +97,30 @@ export async function onboardUser(telegramId: number, name: string, weightKg: nu
   }
 
   return res.json() as Promise<OnboardApiResponse>;
+}
+
+export interface UndoMealApiResponse {
+  undone: {
+    text: string;
+    nutrition: { calories: number; protein: number; carbs: number; fats: number };
+  };
+  daily: {
+    consumed: { calories: number; protein: number; carbs: number; fats: number };
+    targets: { calories: number; protein: number; carbs: number; fats: number };
+  };
+}
+
+export async function undoLastMeal(telegramId: number): Promise<UndoMealApiResponse> {
+  const res = await fetch(`${BASE}/api/undo-meal`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ telegram_id: telegramId }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(err.error || `API error ${res.status}`);
+  }
+
+  return res.json() as Promise<UndoMealApiResponse>;
 }
