@@ -2,6 +2,8 @@
 // Defines the semantic graph model for deterministic nutrition resolution.
 // Source of truth priority: USDA FoodData Central > INTA Argentina > FAO/INFOODS
 
+import type { NutritionValues } from '../../types/index.js';
+
 export interface NutritionalProfile {
   calories: number;
   protein: number;
@@ -54,6 +56,8 @@ export interface OntologyResolutionResult {
   resolutionPath: 'exact_item' | 'concept_preparation' | 'concept_base' | 'category_fallback';
   guardrailWarnings: string[];
   source: string;
+  grams: number;
+  computed: NutritionValues;
 }
 
 export interface OntologyLookupInput {

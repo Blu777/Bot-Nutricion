@@ -93,7 +93,9 @@ mealRoutes.post('/log-meal', async (c) => {
   const ontologyResolvedNames = new Set<string>();
   for (const item of parseResult.items) {
     if (!item.matched) {
-      const grams = item.grams ?? (item.unit === 'g' || item.unit === 'ml' ? item.qty : 100);
+      // Let ontology compute portion grams from its own canonical portion size
+      // instead of hardcoding 100g (fixes CR-4)
+      const grams = item.grams ?? (item.unit === 'g' || item.unit === 'ml' ? item.qty : undefined);
       const ontologyResult = resolveOntology({
         foodText: item.name,
         qty: item.qty,

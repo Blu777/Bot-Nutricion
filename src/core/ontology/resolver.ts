@@ -279,6 +279,8 @@ export function resolveOntology(input: OntologyLookupInput): OntologyResolutionR
     resolutionPath,
     guardrailWarnings: guardrailResult.warnings,
     source: profile.source,
+    grams,
+    computed,
   };
 }
 

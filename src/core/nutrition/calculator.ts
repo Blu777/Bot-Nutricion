@@ -35,14 +35,15 @@ export function calculateItemNutrition(
   const food = foodMap.get(item.food_id);
 
   // ── Determine effective gram weight ───────────────────────
-  let grams: number;
+  // If no dictionary entry exists for a portion-based item, leave grams
+  // undefined so the ontology can compute from its canonical portion size.
+  let grams: number | undefined;
   if (item.grams) {
     grams = item.grams;
   } else if (item.unit === 'g' || item.unit === 'ml') {
     grams = item.qty;
-  } else {
-    const portionGrams = food?.portion_size ?? 100;
-    grams = portionGrams * item.qty;
+  } else if (food) {
+    grams = food.portion_size * item.qty;
   }
 
   // ── Path 1: Ontology resolver (deterministic, USDA-based) ─
@@ -54,20 +55,7 @@ export function calculateItemNutrition(
   });
 
   if (ontologyResult) {
-    const profile = ontologyResult.profile;
-    const isPer100g = profile.per === '100g';
-    const portionGrams = profile.portionGrams ?? grams;
-    const base100gCal  = isPer100g ? profile.calories : (profile.calories / portionGrams) * 100;
-    const base100gProt = isPer100g ? profile.protein  : (profile.protein  / portionGrams) * 100;
-    const base100gCarb = isPer100g ? profile.carbs    : (profile.carbs    / portionGrams) * 100;
-    const base100gFat  = isPer100g ? profile.fats     : (profile.fats     / portionGrams) * 100;
-    const m = grams / 100;
-    const result = {
-      calories: base100gCal  * m,
-      protein:  base100gProt * m,
-      carbs:    base100gCarb * m,
-      fats:     base100gFat  * m,
-    };
+    const result = ontologyResult.computed;
 
     const resPath: ResolutionPath = ontologyResult.resolutionPath === 'concept_preparation'
       ? 'CONCEPT_PLUS_PREPARATION'
@@ -80,9 +68,12 @@ export function calculateItemNutrition(
     return result;
   }
 
+  // Fallback grams for downstream paths when ontology fails and no dictionary entry exists
+  const fallbackGrams = grams ?? 100;
+
   // ── Path 2: Dictionary per-100g ───────────────────────────
   if (food?.nutrition_per_100g) {
-    const m = grams / 100;
+    const m = fallbackGrams / 100;
     const result = {
       calories: food.nutrition_per_100g.calories * m,
       protein:  food.nutrition_per_100g.protein  * m,
@@ -114,7 +105,7 @@ export function calculateItemNutrition(
   }
 
   // ── Path 5: Keyword-based heuristic fallback ──────────────
-  const heuristic = estimateUnknownFood(item.name, grams);
+  const heuristic = estimateUnknownFood(item.name, fallbackGrams);
   if (heuristic) {
     emitMetric(item.name, 'FALLBACK_CATEGORY', 'COMPUTED', heuristic, []);
     return {
@@ -126,7 +117,7 @@ export function calculateItemNutrition(
   }
 
   // ── Path 6: Category fallback ─────────────────────────────
-  const fallback = resolveCategoryFallback(null, grams, item.name);
+  const fallback = resolveCategoryFallback(null, fallbackGrams, item.name);
   if (fallback) {
     const result = {
       calories: fallback.calories,
