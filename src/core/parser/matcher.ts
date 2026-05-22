@@ -137,14 +137,16 @@ function getVariants(word: string): string[] {
     }
   }
 
-  // Multi-word: depluralize last word only
-  // "fideos con tuco" → "fideo con tuco"
+  // Multi-word: depluralize every word ending in 's'
+  // "huevos duros" → "huevo duro", "fideos con tuco" → "fideo con tuco"
   const words = word.split(' ');
   if (words.length > 1) {
-    const lastWord = words[words.length - 1];
-    if (lastWord.endsWith('s') && lastWord.length > 2) {
-      const depl = [...words.slice(0, -1), lastWord.slice(0, -1)].join(' ');
-      variants.push(depl);
+    const depluralized = words.map((w) =>
+      (w.endsWith('s') && w.length > 2) ? w.slice(0, -1) : w
+    );
+    const variant = depluralized.join(' ');
+    if (variant !== word) {
+      variants.push(variant);
     }
   }
 

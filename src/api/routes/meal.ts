@@ -3,6 +3,7 @@ import { parseMealText } from '../../core/parser/index.js';
 import { applyGeminiFallback } from '../../core/parser/fallback.js';
 import { estimateNutritionWithGemini } from '../../core/parser/gemini-estimator.js';
 import { calculateMealNutrition, calculateItemNutrition, calculateRemaining } from '../../core/nutrition/calculator.js';
+import { resolveOntology } from '../../core/ontology/resolver.js';
 import { generateRecommendation } from '../../core/recommendation/engine.js';
 import { getUserByTelegramId } from '../../db/queries/users.js';
 import { createMeal, deleteTodayMeals } from '../../db/queries/meals.js';
@@ -86,6 +87,33 @@ mealRoutes.post('/log-meal', async (c) => {
     trackEvent(user.id, 'parse_failure', { raw_text: body.text, confidence: 0 });
     logger.warn('parser', 'parse_failure', `Zero items parsed for: "${body.text}"`, { request_id: requestId, user_id: user.id });
     return c.json({ error: { type: 'PARSE_ERROR', message: 'No pude interpretar la comida. Intentá ser más específico.', request_id: requestId } }, 422);
+  }
+
+  // 3d. Reconcile unmatched items with deterministic ontology resolver
+  const ontologyResolvedNames = new Set<string>();
+  for (const item of parseResult.items) {
+    if (!item.matched) {
+      const grams = item.grams ?? (item.unit === 'g' || item.unit === 'ml' ? item.qty : 100);
+      const ontologyResult = resolveOntology({
+        foodText: item.name,
+        qty: item.qty,
+        unit: item.unit,
+        grams,
+      });
+      if (ontologyResult) {
+        item.matched = true;
+        item.food_id = ontologyResult.conceptId;
+        ontologyResolvedNames.add(item.name);
+      }
+    }
+  }
+  if (ontologyResolvedNames.size > 0) {
+    parseResult.unmatched = parseResult.unmatched.filter((u) => !ontologyResolvedNames.has(u));
+    logger.info('ontology', 'reconciled', `Resolved ${ontologyResolvedNames.size} items via ontology`, {
+      request_id: requestId,
+      user_id: user.id,
+      meta: { items: Array.from(ontologyResolvedNames) },
+    });
   }
 
   // 4. Estimate nutrition for any remaining unmatched items via Gemini

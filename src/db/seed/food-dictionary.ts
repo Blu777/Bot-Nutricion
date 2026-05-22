@@ -135,7 +135,11 @@ const foods = [
   {
     id: 'huevo',
     name: 'Huevo entero',
-    aliases: ['huevo', 'huevos', 'huevo frito', 'huevo duro', 'huevo revuelto', 'huevo hervido', 'huevo cocido'],
+    aliases: [
+      'huevo', 'huevos', 'huevo frito', 'huevo duro', 'huevo revuelto', 'huevo hervido', 'huevo cocido',
+      'huevos duros', 'huevos fritos', 'huevos revueltos', 'huevos hervidos', 'huevos cocidos',
+      'huevito', 'huevitos',
+    ],
     category: 'huevos',
     portion_size: 60,
     portion_unit: 'g',
