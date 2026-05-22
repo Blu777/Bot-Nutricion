@@ -118,23 +118,18 @@ export function inferCategoryFromName(foodName: string): string | null {
 // ─── Step 1: Extract preparation method ───────────────────────
 export function extractPreparation(foodText: string): { cleanText: string; prepId: string | null } {
   const normalized = normalizeText(foodText);
-  const words = normalized.split(' ');
 
   // Try longest alias first (multi-word preps like "a la plancha")
   const sortedEntries = [...PREP_ALIAS_MAP.entries()].sort((a, b) => b[0].length - a[0].length);
 
   for (const [alias, prepId] of sortedEntries) {
-    if (normalized.includes(alias)) {
-      const cleanText = normalized.replace(alias, '').replace(/\s+/g, ' ').trim();
-      // Don't strip prep if it's the only word
-      if (cleanText.length > 0) {
-        return { cleanText, prepId };
-      }
+    const result = removeWordSequence(normalized, alias);
+    if (result && result.length > 0) {
+      return { cleanText: result, prepId };
     }
   }
 
   // No explicit prep found — check for implicit prep in compound name
-  // "huevo duro" → hervido, "huevo frito" → frito
   const implicitPrepMap: Array<[RegExp, string]> = [
     [/\bduro\b|\bdura\b/, 'hervido'],
     [/\bfrito\b|\bfrita\b/, 'frito'],
@@ -156,6 +151,22 @@ export function extractPreparation(foodText: string): { cleanText: string; prepI
   }
 
   return { cleanText: normalized, prepId: null };
+}
+
+function removeWordSequence(text: string, sequence: string): string | null {
+  const textWords = text.split(/\s+/);
+  const seqWords = sequence.split(/\s+/);
+
+  for (let i = 0; i <= textWords.length - seqWords.length; i++) {
+    const slice = textWords.slice(i, i + seqWords.length);
+    if (slice.join(' ') === sequence) {
+      const before = textWords.slice(0, i);
+      const after = textWords.slice(i + seqWords.length);
+      const result = [...before, ...after].join(' ').trim();
+      return result || null;
+    }
+  }
+  return null;
 }
 
 // ─── Step 2: Find concept by alias ────────────────────────────

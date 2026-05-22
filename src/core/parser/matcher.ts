@@ -110,47 +110,60 @@ function normalize(text: string): string {
 }
 
 function getVariants(word: string): string[] {
-  const variants: string[] = [];
+  const variants = new Set<string>();
 
-  // Spanish depluralization: try multiple strategies
-  // "milanesas" → "milanesa" (drop trailing "s")
-  if (word.endsWith('s') && word.length > 2) {
-    variants.push(word.slice(0, -1));
+  // Single-word: depluralize using most-specific rule first
+  const depluralized = depluralizeWord(word);
+  if (depluralized && depluralized !== word) {
+    variants.add(depluralized);
   }
-  // "porciones" → "porcion" (drop "es")
-  if (word.endsWith('es') && word.length > 3) {
-    variants.push(word.slice(0, -2));
-  }
-  // "tallarines" → "tallarin" (drop "es" from -ines words)
-  if (word.endsWith('ines') && word.length > 5) {
-    variants.push(word.slice(0, -2));  // "tallarines" → "tallarine"
-    variants.push(word.slice(0, -2).slice(0, -1)); // "tallarine" → "tallarin"... not right
-    // Better: "tallarines" → "tallarin"
-    variants.push(word.slice(0, -3) + 'n'); // "tallarin" (remove "nes", add "n")
-  }
-  // Pluralize: "milanesa" → "milanesas"
+
+  // Pluralize base forms
   if (!word.endsWith('s')) {
-    variants.push(word + 's');
-    // Also try adding "es" for words ending in consonants
-    if (/[nlr]$/.test(word)) {
-      variants.push(word + 'es');
+    variants.add(word + 's');
+    if (/[nlrz]$/.test(word)) {
+      variants.add(word + 'es');
     }
   }
 
-  // Multi-word: depluralize every word ending in 's'
-  // "huevos duros" → "huevo duro", "fideos con tuco" → "fideo con tuco"
+  // Multi-word: depluralize each word individually
   const words = word.split(' ');
   if (words.length > 1) {
-    const depluralized = words.map((w) =>
-      (w.endsWith('s') && w.length > 2) ? w.slice(0, -1) : w
-    );
-    const variant = depluralized.join(' ');
+    const depluralizedWords = words.map((w) => depluralizeWord(w) ?? w);
+    const variant = depluralizedWords.join(' ');
     if (variant !== word) {
-      variants.push(variant);
+      variants.add(variant);
     }
   }
 
-  return [...new Set(variants)].filter((v) => v !== word);
+  return [...variants].filter((v) => v !== word);
+}
+
+/**
+ * Depluralizes a single Spanish word using ordered specificity.
+ * Returns null if no depluralization applies.
+ */
+function depluralizeWord(word: string): string | null {
+  if (!word.endsWith('s') || word.length <= 2) return null;
+
+  // Most specific suffixes first
+  if (word.endsWith('ines') && word.length > 5) {
+    return word.slice(0, -3) + 'n'; // tallarines → tallarin, examenes → examen
+  }
+  if (word.endsWith('ones') && word.length > 4) {
+    return word.slice(0, -2); // ratones → raton, porciones → porcion
+  }
+  if (word.endsWith('ces') && word.length > 3) {
+    return word.slice(0, -2) + 'z'; // lapices → lapiz
+  }
+  if (word.endsWith('es') && word.length > 3) {
+    return word.slice(0, -2); // flores → flor
+  }
+  if (word.endsWith('s') && word.length > 2) {
+    return word.slice(0, -1); // manzanas → manzana, huevos → huevo
+  }
+
+  return null;
 }
 
 function levenshtein(a: string, b: string): number {

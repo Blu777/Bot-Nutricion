@@ -118,6 +118,12 @@ function parseEstimate(
       return null;
     }
 
+    // Hard physical-validation guardrail (CR-3)
+    if (!isPhysicallyPossible({ calories, protein, carbs, fats }, grams)) {
+      console.log(`[gemini-estimator] Rejected physically impossible macros: P=${protein} C=${carbs} F=${fats} cal=${calories} for ${grams}g`);
+      return null;
+    }
+
     return {
       food_name: foodName,
       calories,
@@ -132,4 +138,24 @@ function parseEstimate(
     console.log('[gemini-estimator] Failed to parse JSON');
     return null;
   }
+}
+
+function isPhysicallyPossible(
+  macros: { calories: number; protein: number; carbs: number; fats: number },
+  grams: number,
+): boolean {
+  // 1. Macronutrient mass cannot exceed food mass (allow 10% for water/fiber/ash)
+  const totalMacros = macros.protein + macros.carbs + macros.fats;
+  if (totalMacros > grams * 1.1) {
+    return false;
+  }
+
+  // 2. Caloric equation must hold within tolerance (allow ±2 cal/g for rounding/fiber)
+  const expectedCalories = macros.protein * 4 + macros.carbs * 4 + macros.fats * 9;
+  const calDeviation = Math.abs(macros.calories - expectedCalories);
+  if (calDeviation > grams * 2) {
+    return false;
+  }
+
+  return true;
 }
