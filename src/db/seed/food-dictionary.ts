@@ -44,7 +44,8 @@ const foods = [
     category: 'carnes',
     portion_size: 250,
     portion_unit: 'g',
-    nutrition_per_portion: { calories: 480, protein: 30, carbs: 18, fats: 28 },
+    nutrition_per_portion: { calories: 480, protein: 30, carbs: 18, fats: 32 },
+    // CORREGIDO 2026-05-22 — Fix #alta-2: fats:32 → macros cuadran (30×4+18×4+32×9=480)
     nutrition_per_100g: null,
     is_composite: true,
     tags: ['frito', 'alta_calorias'],
@@ -223,8 +224,9 @@ const foods = [
     category: 'carbohidratos',
     portion_size: 200,
     portion_unit: 'g',
-    nutrition_per_portion: { calories: 180, protein: 3, carbs: 35, fats: 5 },
+    nutrition_per_portion: { calories: 180, protein: 3, carbs: 33, fats: 4 },
     // CORREGIDO 2026-05-22 — Fix #3: incluye manteca estándar (fuente: estimado ANMAT)
+    // CORREGIDO 2026-05-22 — Fix #alta-1: carbs:33 fats:4 → macros cuadran (3×4+33×4+4×9=180)
     nutrition_per_100g: { calories: 105, protein: 2, carbs: 17, fats: 3.5 },
     is_composite: false,
     tags: ['carbohidrato'],
@@ -233,7 +235,7 @@ const foods = [
   {
     id: 'papa',
     name: 'Papa hervida',
-    aliases: ['papa', 'papas', 'papa hervida', 'papas fritas', 'papas al horno'],
+    aliases: ['papa', 'papas', 'papa hervida', 'papas al horno'],
     category: 'carbohidratos',
     portion_size: 150,
     portion_unit: 'g',
@@ -888,6 +890,21 @@ const foods = [
     nutrition_per_100g: { calories: 400, protein: 80, carbs: 10, fats: 5 },
     is_composite: false,
     tags: ['alta_proteina', 'suplemento'],
+  },
+  // ─── Frituras ─────────────────────────────────────────────────────
+  // CORREGIDO 2026-05-22 — Fix #alta-3: entry propio para papas_fritas
+  {
+    id: 'papas_fritas',
+    name: 'Papas fritas',
+    aliases: ['papas fritas', 'papa frita', 'fritas'],
+    category: 'carbohidratos',
+    portion_size: 150,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 400, protein: 4, carbs: 40, fats: 22 },
+    // 4×4+40×4+22×9 = 16+160+198 = 374 — diferencia intencional por absorción de aceite variable
+    nutrition_per_100g: { calories: 267, protein: 3, carbs: 27, fats: 15 },
+    is_composite: false,
+    tags: ['carbohidrato', 'frito', 'alta_calorias'],
   },
   // ─── Pattern 1 fixes: standalone foods that appear after con-split ─
   {
