@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "bot": "tsx src/bot/index.ts",
     "bot:prod": "node dist/bot/standalone.js",
+    "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed/food-dictionary.ts"
   },
   "dependencies": {

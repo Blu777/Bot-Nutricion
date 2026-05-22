@@ -1,4 +1,4 @@
-﻿services:
+services:
 
   db:
     image: postgres:15-alpine
@@ -16,40 +16,11 @@
       retries: 5
 
   db-init:
-    image: postgres:15-alpine
+    image: ghcr.io/blu777/bot-nutricion:latest
     restart: "no"
     environment:
-      PGHOST: db
-      PGUSER: postgres
-      PGPASSWORD: postgres
-      PGDATABASE: nutrition
-    command:
-      - sh
-      - -c
-      - |
-        echo "Waiting for database..."
-        for i in 1 2 3 4 5 6 7 8 9 10; do
-          pg_isready -h db -U postgres && break
-          echo "Waiting for DB... attempt $$i"
-          sleep 3
-        done
-        echo "Creating schema..."
-        psql -c "CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), telegram_id BIGINT UNIQUE NOT NULL, name TEXT, weight_kg DECIMAL(5,1) NOT NULL, goal TEXT NOT NULL CHECK (goal IN ('lose_fat', 'maintain', 'gain_muscle')), activity_level TEXT NOT NULL CHECK (activity_level IN ('sedentary', 'light', 'moderate', 'active', 'very_active')), targets JSONB NOT NULL DEFAULT '{\"calories\": 2000, \"protein\": 120, \"carbs\": 250, \"fats\": 65}', timezone TEXT NOT NULL DEFAULT 'America/Argentina/Buenos_Aires', onboarded BOOLEAN DEFAULT FALSE, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());"
-        psql -c "CREATE TABLE IF NOT EXISTS food_dictionary (id TEXT PRIMARY KEY, name TEXT NOT NULL, aliases TEXT[] NOT NULL DEFAULT '{}', category TEXT, portion_size DECIMAL(6,1) NOT NULL, portion_unit TEXT NOT NULL DEFAULT 'g', nutrition_per_portion JSONB NOT NULL, nutrition_per_100g JSONB, is_composite BOOLEAN DEFAULT FALSE, tags TEXT[] DEFAULT '{}', cooking_method TEXT, cooking_note TEXT, cut_variance JSONB, estimation_note TEXT, dressing_note TEXT, ask_dressing BOOLEAN DEFAULT FALSE, typical_serving DECIMAL(6,1), serving_note TEXT, created_at TIMESTAMPTZ DEFAULT NOW());"
-        psql -c "ALTER TABLE food_dictionary ADD COLUMN IF NOT EXISTS cooking_method TEXT, ADD COLUMN IF NOT EXISTS cooking_note TEXT, ADD COLUMN IF NOT EXISTS cut_variance JSONB, ADD COLUMN IF NOT EXISTS estimation_note TEXT, ADD COLUMN IF NOT EXISTS dressing_note TEXT, ADD COLUMN IF NOT EXISTS ask_dressing BOOLEAN DEFAULT FALSE, ADD COLUMN IF NOT EXISTS typical_serving DECIMAL(6,1), ADD COLUMN IF NOT EXISTS serving_note TEXT;"
-        psql -c "CREATE INDEX IF NOT EXISTS idx_food_aliases ON food_dictionary USING GIN(aliases);"
-        psql -c "CREATE TABLE IF NOT EXISTS meals (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id UUID REFERENCES users(id) NOT NULL, raw_text TEXT NOT NULL, parsed_items JSONB NOT NULL DEFAULT '[]', nutrition JSONB NOT NULL DEFAULT '{}', parse_method TEXT NOT NULL CHECK (parse_method IN ('dictionary', 'gemini', 'hybrid')), confidence DECIMAL(3,2) DEFAULT 1.0, logged_at TIMESTAMPTZ DEFAULT NOW(), date DATE NOT NULL DEFAULT CURRENT_DATE);"
-        psql -c "CREATE INDEX IF NOT EXISTS idx_meals_user_date ON meals(user_id, date);"
-        psql -c "CREATE INDEX IF NOT EXISTS idx_meals_logged_at ON meals(user_id, logged_at DESC);"
-        psql -c "CREATE TABLE IF NOT EXISTS daily_logs (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id UUID REFERENCES users(id) NOT NULL, date DATE NOT NULL, nutrition_totals JSONB NOT NULL DEFAULT '{\"calories\": 0, \"protein\": 0, \"carbs\": 0, \"fats\": 0}', targets_snapshot JSONB NOT NULL DEFAULT '{}', meal_count INTEGER DEFAULT 0, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW(), UNIQUE(user_id, date));"
-        psql -c "CREATE INDEX IF NOT EXISTS idx_daily_logs_user_date ON daily_logs(user_id, date);"
-        psql -c "CREATE TABLE IF NOT EXISTS events (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id UUID REFERENCES users(id), type TEXT NOT NULL, metadata JSONB DEFAULT '{}', created_at TIMESTAMPTZ DEFAULT NOW());"
-        psql -c "CREATE INDEX IF NOT EXISTS idx_events_user ON events(user_id);"
-        psql -c "CREATE INDEX IF NOT EXISTS idx_events_type ON events(type);"
-        psql -c "CREATE INDEX IF NOT EXISTS idx_events_created ON events(created_at DESC);"
-        psql -c "CREATE TABLE IF NOT EXISTS unknown_foods (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), term TEXT NOT NULL, user_id UUID REFERENCES users(id), raw_input TEXT, occurrences INTEGER DEFAULT 1, first_seen TIMESTAMPTZ DEFAULT NOW(), last_seen TIMESTAMPTZ DEFAULT NOW());"
-        psql -c "CREATE UNIQUE INDEX IF NOT EXISTS idx_unknown_foods_term ON unknown_foods(term);"
-        echo "Schema created successfully"
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/nutrition
+    command: sh -c "node dist/db/migrate.js && node dist/db/seed/food-dictionary.js"
     depends_on:
       db:
         condition: service_healthy

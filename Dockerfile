@@ -24,9 +24,8 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
 
-# Copy SQL schema for reference (used manually, not auto-run)
-COPY src/db/schema.sql ./schema.sql
-
+# Copy SQL migrations to be run by the migration script
+COPY src/db/migrations ./dist/db/migrations
 # Run as non-root for security
 USER node
 
