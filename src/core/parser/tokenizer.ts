@@ -32,14 +32,17 @@ const WORD_NUMBERS: Record<string, number> = {
 // CORREGIDO 2026-05-22 — Plurales sin cantidad explícita
 // ASSUME_TWO: plural donde la porción mínima razonable es 2
 const ASSUME_TWO: string[] = [
-  'medialunas', 'empanadas', 'tostadas', 'croquetas',
-  'nuggets', 'alitas', 'papas fritas',
+  'medialunas', 'empanadas', 'croquetas',
+  'nuggets', 'alitas',
+  // 'tostadas' movido a ASK_QUANTITY: la porción del diccionario ya es ~2 tostadas
+  // 'papas fritas' removido: ahora tiene entry propio (papas_fritas) con porción correcta
 ];
 
 // ASK_QUANTITY: plural donde la cantidad varía demasiado para asumir
 const ASK_QUANTITY: string[] = [
   'galletitas', 'facturas', 'alfajores', 'panchos',
   'hamburguesas', 'milanesas', 'huevos',
+  'tostadas', // CORREGIDO 2026-05-22 — Fix #alta-4: movido desde ASSUME_TWO
 ];
 
 // Input is ALREADY normalized (lowercase, no accents, slang expanded)
