@@ -23,7 +23,8 @@ summaryRoutes.get('/daily-summary', async (c) => {
   const dailyLog = await getOrCreateDailyLog(user.id, userDate, user.targets);
   const meals = await getMealsByUserAndDate(user.id, userDate);
   const remaining = calculateRemaining(user.targets, dailyLog.nutrition_totals);
-  const recommendation = generateRecommendation(remaining, dailyLog.nutrition_totals, user.targets);
+  const todayFoodIds = meals.flatMap((m) => m.parsed_items).map((i) => i.food_id).filter(Boolean);
+  const recommendation = generateRecommendation(remaining, dailyLog.nutrition_totals, user.targets, todayFoodIds);
 
   const progressPct = {
     calories: Math.round((dailyLog.nutrition_totals.calories / user.targets.calories) * 100),

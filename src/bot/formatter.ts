@@ -15,8 +15,10 @@ export function formatMealLogged(data: LogMealApiResponse): string {
 
   // Show clearer unmatched warning with item names
   if (meal.unmatched.length > 0) {
+    const genericCal = 210;
     msg += `\n\n⚠️ No reconocí: "${meal.unmatched.join('", "')}"`;
-    msg += `\nLos estimé con valores genéricos.`;
+    msg += `\nEstimé ~${genericCal} cal por ítem (puede variar ±40%).`;
+    msg += `\nSi la porción fue muy diferente, decime el gramaje.`;
   }
 
   msg += `\n\n🥩 +${meal.total.protein}g prot · +${meal.total.calories} cal`;
@@ -26,6 +28,63 @@ export function formatMealLogged(data: LogMealApiResponse): string {
     msg += `\nFaltan: ${daily.remaining.protein}g prot, ${daily.remaining.calories} cal`;
   } else {
     msg += '\n🎯 ¡Objetivo de proteína alcanzado!';
+  }
+
+  // Avisos contextuales por alimento (máximo 3)
+  let warningCount = 0;
+  const MAX_WARNINGS = 3;
+
+  const hasMilanesa = meal.items.some((i) =>
+    i.food_id === 'milanesa_carne' || i.food_id === 'milanesa'
+  );
+  if (hasMilanesa && warningCount < MAX_WARNINGS) {
+    msg += `\n🍳 Registré como milanesa frita (~320 cal/u).`;
+    msg += ` Al horno serían ~250 cal/u. ¿Cuál fue?`;
+    warningCount++;
+  }
+
+  const hasSalad = meal.items.some((i) =>
+    i.food_id?.includes('ensalada')
+  );
+  if (hasSalad && warningCount < MAX_WARNINGS) {
+    msg += `\n🥗 Ensalada sin aderezo (~50 cal).`;
+    msg += ` Con aceite de oliva: +100–120 cal.`;
+    warningCount++;
+  }
+
+  const hasAsado = meal.items.some((i) =>
+    i.food_id === 'carne_asado'
+  );
+  if (hasAsado && warningCount < MAX_WARNINGS) {
+    msg += `\n🥩 Asado estimado como corte mixto (~400 cal).`;
+    msg += ` Varía: vacío ~350 | costilla ~480 | entraña ~390.`;
+    warningCount++;
+  }
+
+  const hasGalletitas = meal.items.some((i) =>
+    i.food_id?.includes('galletitas')
+  );
+  if (hasGalletitas && warningCount < MAX_WARNINGS) {
+    msg += `\n🍪 Galletitas: registré porción estándar (~30g = 6 unidades).`;
+    msg += ` Si comiste más, decime cuántas.`;
+    warningCount++;
+  }
+
+  const hasPure = meal.items.some((i) =>
+    i.food_id === 'pure_papa'
+  );
+  if (hasPure && warningCount < MAX_WARNINGS) {
+    msg += `\n🥔 Puré estimado con manteca (~105 cal/100g).`;
+    msg += ` Sin manteca serían ~72 cal/100g.`;
+    warningCount++;
+  }
+
+  // Warnings de cantidad asumida (plural sin número explícito)
+  if ((meal.quantity_warnings?.length ?? 0) > 0) {
+    meal.quantity_warnings!.slice(0, MAX_WARNINGS - warningCount).forEach((w) => {
+      msg += `\n📌 ${w}`;
+      warningCount++;
+    });
   }
 
   if (recommendation.text) {

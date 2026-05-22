@@ -21,6 +21,7 @@ export function parseMealText(text: string, dictionary: FoodEntry[]): { result: 
   // 3. Match each token
   const items: ParsedItem[] = [];
   const unmatched: string[] = [];
+  const quantity_warnings: string[] = [];
   let totalConfidence = 0;
   const matchLogs: ParseLog['matches'] = [];
 
@@ -54,6 +55,10 @@ export function parseMealText(text: string, dictionary: FoodEntry[]): { result: 
       });
       unmatched.push(token.foodText);
     }
+
+    if (token.pluralWarning) {
+      quantity_warnings.push(token.pluralWarning);
+    }
   }
 
   const confidence = tokens.length > 0
@@ -65,6 +70,7 @@ export function parseMealText(text: string, dictionary: FoodEntry[]): { result: 
     confidence,
     method: 'dictionary',
     unmatched,
+    quantity_warnings,
   };
 
   const log: ParseLog = {

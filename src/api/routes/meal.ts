@@ -118,7 +118,8 @@ mealRoutes.post('/log-meal', async (c) => {
   const remaining = calculateRemaining(user.targets, newTotals);
 
   // 9. Generate recommendation (with fat excess detection)
-  const recommendation = generateRecommendation(remaining, newTotals, user.targets);
+  const todayFoodIds = parseResult.items.map((i) => i.food_id).filter(Boolean);
+  const recommendation = generateRecommendation(remaining, newTotals, user.targets, todayFoodIds);
 
   // 10. Check if any items are estimated
   const hasEstimated = parseResult.items.some((item) => !item.matched);
@@ -131,6 +132,7 @@ mealRoutes.post('/log-meal', async (c) => {
     meal: {
       id: meal.id,
       items: parseResult.items.map((item) => ({
+        food_id: item.food_id,
         name: item.name,
         qty: item.qty,
         matched: item.matched,
@@ -140,6 +142,7 @@ mealRoutes.post('/log-meal', async (c) => {
       confidence: parseResult.confidence,
       estimated: hasEstimated,
       unmatched: parseResult.unmatched,
+      quantity_warnings: parseResult.quantity_warnings,
     },
     daily: {
       consumed: newTotals,

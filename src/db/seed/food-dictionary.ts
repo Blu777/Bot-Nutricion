@@ -10,6 +10,7 @@ const sql = postgres(DATABASE_URL);
 
 const foods = [
   // ─── Carnes ──────────────────────────────────────────────────
+  // CORREGIDO 2026-05-22 — Fix #2: agregado cooking_method y cooking_note
   {
     id: 'milanesa_carne',
     name: 'Milanesa de carne',
@@ -21,6 +22,8 @@ const foods = [
     nutrition_per_100g: { calories: 213, protein: 15, carbs: 8, fats: 13 },
     is_composite: false,
     tags: ['frito', 'proteina'],
+    cooking_method: 'frita',
+    cooking_note: 'Al horno reduce ~70 cal por unidad. Ver milanesa_horno.',
   },
   {
     id: 'milanesa_pollo',
@@ -54,7 +57,8 @@ const foods = [
     portion_size: 200,
     portion_unit: 'g',
     nutrition_per_portion: { calories: 240, protein: 46, carbs: 0, fats: 5 },
-    nutrition_per_100g: { calories: 120, protein: 23, carbs: 0, fats: 2.5 },
+    // CORREGIDO 2026-05-22 — Fix #1: valores crudo→cocido (USDA FoodData Central)
+    nutrition_per_100g: { calories: 165, protein: 31, carbs: 0, fats: 3.6 },
     is_composite: false,
     tags: ['alta_proteina', 'bajo_grasa'],
   },
@@ -66,9 +70,16 @@ const foods = [
     portion_size: 200,
     portion_unit: 'g',
     nutrition_per_portion: { calories: 400, protein: 40, carbs: 0, fats: 26 },
+    // CORREGIDO 2026-05-22 — Fix #6: agregado cut_variance y estimation_note
     nutrition_per_100g: { calories: 200, protein: 20, carbs: 0, fats: 13 },
     is_composite: false,
     tags: ['proteina', 'alta_grasa'],
+    cut_variance: {
+      vacio: { calories: 200, fats: 10 },
+      costilla: { calories: 280, fats: 18 },
+      entrana: { calories: 220, fats: 13 },
+    },
+    estimation_note: 'Varía por corte: 200–280 cal/100g',
   },
   {
     id: 'carne_picada',
@@ -213,9 +224,11 @@ const foods = [
     portion_size: 200,
     portion_unit: 'g',
     nutrition_per_portion: { calories: 180, protein: 3, carbs: 35, fats: 5 },
-    nutrition_per_100g: { calories: 90, protein: 1.5, carbs: 17, fats: 2.5 },
+    // CORREGIDO 2026-05-22 — Fix #3: incluye manteca estándar (fuente: estimado ANMAT)
+    nutrition_per_100g: { calories: 105, protein: 2, carbs: 17, fats: 3.5 },
     is_composite: false,
     tags: ['carbohidrato'],
+    estimation_note: 'Incluye manteca estándar. Sin manteca: ~72 cal/100g',
   },
   {
     id: 'papa',
@@ -338,6 +351,9 @@ const foods = [
     nutrition_per_100g: { calories: 33, protein: 1.3, carbs: 5, fats: 0.7 },
     is_composite: false,
     tags: ['bajo_calorias', 'fibra'],
+    // CORREGIDO 2026-05-22 — Fix #4: agregado dressing_note y ask_dressing
+    dressing_note: 'Sin aderezo. Con 1 cda aceite de oliva: +119 cal',
+    ask_dressing: true,
   },
   {
     id: 'batata',
@@ -443,12 +459,15 @@ const foods = [
     name: 'Galletitas dulces',
     aliases: ['galletitas', 'galletitas dulces', 'galletas', 'pepas'],
     category: 'snacks',
+    // CORREGIDO 2026-05-22 — Fix #5: agregado typical_serving y serving_note
     portion_size: 30,
+    typical_serving: 60,
     portion_unit: 'g',
     nutrition_per_portion: { calories: 135, protein: 2, carbs: 20, fats: 5 },
     nutrition_per_100g: { calories: 450, protein: 6, carbs: 67, fats: 17 },
     is_composite: false,
     tags: ['snack'],
+    serving_note: '30g ≈ 6 unidades. Merienda típica: 60–90g (12–18 unidades)',
   },
   {
     id: 'galletitas_arroz',
@@ -581,7 +600,8 @@ const foods = [
     portion_size: 150,
     portion_unit: 'g',
     nutrition_per_portion: { calories: 250, protein: 24, carbs: 12, fats: 12 },
-    nutrition_per_100g: { calories: 167, protein: 16, carbs: 8, fats: 8 },
+    // CORREGIDO 2026-05-22 — Fix #2: corregido nutrition_per_100g (era incorrecto respecto a portion)
+    nutrition_per_100g: { calories: 175, protein: 22, carbs: 8, fats: 6 },
     is_composite: false,
     tags: ['proteina', 'bajo_grasa'],
   },

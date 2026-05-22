@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { getUserByTelegramId } from '../../db/queries/users.js';
 import { getOrCreateDailyLog } from '../../db/queries/daily-logs.js';
+import { getMealsByUserAndDate } from '../../db/queries/meals.js';
 import { calculateRemaining } from '../../core/nutrition/calculator.js';
 import { generateRecommendation } from '../../core/recommendation/engine.js';
 
@@ -20,7 +21,9 @@ recommendationRoutes.get('/recommendation', async (c) => {
 
   const userDate = new Date().toLocaleDateString('en-CA', { timeZone: user.timezone });
   const dailyLog = await getOrCreateDailyLog(user.id, userDate, user.targets);
+  const meals = await getMealsByUserAndDate(user.id, userDate);
   const remaining = calculateRemaining(user.targets, dailyLog.nutrition_totals);
+  const todayFoodIds = meals.flatMap((m) => m.parsed_items).map((i) => i.food_id).filter(Boolean);
 
   // Determine time of day for context
   const now = new Date();
@@ -32,7 +35,7 @@ recommendationRoutes.get('/recommendation', async (c) => {
   else if (hour < 17) timeOfDay = 'tarde';
   else timeOfDay = 'noche';
 
-  const recommendation = generateRecommendation(remaining, dailyLog.nutrition_totals, user.targets);
+  const recommendation = generateRecommendation(remaining, dailyLog.nutrition_totals, user.targets, todayFoodIds);
 
   return c.json({
     context: {

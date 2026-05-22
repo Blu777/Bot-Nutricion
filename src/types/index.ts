@@ -59,6 +59,7 @@ export interface ParseResult {
   confidence: number;
   method: 'dictionary' | 'gemini' | 'hybrid';
   unmatched: string[];
+  quantity_warnings: string[];
 }
 
 // ─── Meal ────────────────────────────────────────────────────

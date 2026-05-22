@@ -10,6 +10,7 @@ export function generateRecommendation(
   remaining: NutritionValues,
   consumed?: NutritionValues,
   targets?: NutritionValues,
+  consumedFoodIds: string[] = [],
 ): Recommendation {
   const { protein, calories, fats, carbs } = remaining;
 
@@ -27,17 +28,23 @@ export function generateRecommendation(
     };
   }
 
+  // Helper: filter out already-consumed foods (Fix #11)
+  const filterConsumed = (foods: string[]): string[] =>
+    consumedFoodIds.length > 0
+      ? foods.filter((f) => !consumedFoodIds.includes(f))
+      : foods;
+
   // ── Large calorie deficit + high protein deficit ───────────
   if (calories > 500 && protein > 40) {
     if (hasFatExcess) {
       return {
         text: `Te faltan ${calories} cal y ${protein}g de proteína, pero ya te pasaste en grasas. Priorizá proteína magra: pechuga a la plancha, atún al natural, o claras con tostadas.`,
-        suggested_foods: ['pechuga_pollo', 'atun_lata', 'tostadas'],
+        suggested_foods: filterConsumed(['pechuga_pollo', 'atun_lata', 'tostadas']),
       };
     }
     return {
       text: `Te faltan ${calories} cal y ${protein}g de proteína. Recomendación: pollo con arroz y ensalada, o carne con puré.`,
-      suggested_foods: ['pechuga_pollo', 'arroz', 'carne_asado'],
+      suggested_foods: filterConsumed(['pechuga_pollo', 'arroz', 'carne_asado']),
     };
   }
 
@@ -46,26 +53,27 @@ export function generateRecommendation(
     if (carbs > 80) {
       return {
         text: `Te faltan ${calories} cal y ${carbs}g de carbos. Recomendación: fideos con tuco, arroz con pollo, o una tarta.`,
-        suggested_foods: ['fideos_salsa', 'arroz', 'tarta_jamon_queso'],
+        suggested_foods: filterConsumed(['fideos_salsa', 'arroz', 'tarta_jamon_queso']),
       };
     }
     return {
       text: `Te faltan ${calories} calorías. Recomendación: un plato completo como guiso de lentejas o milanesa con ensalada.`,
-      suggested_foods: ['guiso_lentejas', 'milanesa_carne'],
+      suggested_foods: filterConsumed(['guiso_lentejas', 'milanesa_carne']),
     };
   }
 
   // ── High protein deficit (but calories moderate) ───────────
-  if (protein > 40) {
+  // Fix #12: only enter if calories margin supports a protein-focused meal (~200 cal min)
+  if (protein > 40 && calories > 200) {
     if (hasFatExcess || fats <= 5) {
       return {
         text: `Te faltan ${protein}g de proteína y tenés poco margen de grasas. Recomendación: pechuga de pollo, atún al natural, o claras de huevo.`,
-        suggested_foods: ['pechuga_pollo', 'atun_lata', 'huevo'],
+        suggested_foods: filterConsumed(['pechuga_pollo', 'atun_lata', 'huevo']),
       };
     }
     return {
       text: `Te faltan ${protein}g de proteína. Recomendación: carne magra, huevos, o yogur griego con frutos secos.`,
-      suggested_foods: ['carne_asado', 'huevo', 'yogur_griego'],
+      suggested_foods: filterConsumed(['carne_asado', 'huevo', 'yogur_griego']),
     };
   }
 
@@ -73,7 +81,7 @@ export function generateRecommendation(
   if (protein > 20) {
     return {
       text: `Te faltan ${protein}g de proteína. Un snack proteico como yogur griego, queso o un puñado de almendras te acerca al objetivo.`,
-      suggested_foods: ['yogur_griego', 'queso_port_salut', 'almendras'],
+      suggested_foods: filterConsumed(['yogur_griego', 'queso_port_salut', 'almendras']),
     };
   }
 
@@ -81,7 +89,7 @@ export function generateRecommendation(
   if (carbs > 60 && calories > 200) {
     return {
       text: `Te faltan ${carbs}g de carbos y ${calories} cal. Podés sumar arroz, fideos o una fruta.`,
-      suggested_foods: ['arroz', 'fideos', 'banana'],
+      suggested_foods: filterConsumed(['arroz', 'fideos', 'banana']),
     };
   }
 
@@ -89,7 +97,7 @@ export function generateRecommendation(
   if (calories > 200) {
     return {
       text: `Vas bien! Te faltan ${calories} cal. Podés cerrar con una fruta, un yogur o unas tostadas.`,
-      suggested_foods: ['banana', 'yogur_griego', 'tostadas'],
+      suggested_foods: filterConsumed(['banana', 'yogur_griego', 'tostadas']),
     };
   }
 

@@ -5,6 +5,8 @@ export interface Token {
   unit: 'portion' | 'g' | 'ml' | 'kg';
   grams?: number;
   foodText: string;
+  assumedQty?: boolean;        // true si qty fue inferida, no explícita
+  pluralWarning?: string;      // mensaje para mostrar al usuario
 }
 
 // Unit aliases
@@ -26,6 +28,19 @@ const WORD_NUMBERS: Record<string, number> = {
   'dos': 2, 'tres': 3, 'cuatro': 4, 'cinco': 5,
   'seis': 6, 'siete': 7, 'ocho': 8, 'nueve': 9, 'diez': 10,
 };
+
+// CORREGIDO 2026-05-22 — Plurales sin cantidad explícita
+// ASSUME_TWO: plural donde la porción mínima razonable es 2
+const ASSUME_TWO: string[] = [
+  'medialunas', 'empanadas', 'tostadas', 'croquetas',
+  'nuggets', 'alitas', 'papas fritas',
+];
+
+// ASK_QUANTITY: plural donde la cantidad varía demasiado para asumir
+const ASK_QUANTITY: string[] = [
+  'galletitas', 'facturas', 'alfajores', 'panchos',
+  'hamburguesas', 'milanesas', 'huevos',
+];
 
 // Input is ALREADY normalized (lowercase, no accents, slang expanded)
 export function tokenize(input: string): Token[] {
@@ -145,9 +160,30 @@ function parseSegment(segment: string): Token | null {
     }
   }
 
-  // No quantity detected — default to 1 portion
-  // Strip remaining leading articles/prepositions
+  // No quantity detected — check for implicit plural before defaulting
   foodText = foodText.replace(/^(?:de|del|al|a la|a el)\s+/i, '');
+
+  const foodLower = foodText.toLowerCase().trim();
+
+  if (ASSUME_TWO.includes(foodLower)) {
+    return {
+      quantity: 2,
+      unit: 'portion',
+      foodText,
+      assumedQty: true,
+      pluralWarning: `Asumí 2 ${foodText}. ¿Fueron más o menos?`,
+    };
+  }
+
+  if (ASK_QUANTITY.includes(foodLower)) {
+    return {
+      quantity: 1,
+      unit: 'portion',
+      foodText,
+      assumedQty: true,
+      pluralWarning: `¿Cuántas/os ${foodText} comiste? Registré 1 por ahora.`,
+    };
+  }
 
   return { quantity: 1, unit: 'portion', foodText };
 }

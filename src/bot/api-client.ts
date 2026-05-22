@@ -8,11 +8,12 @@ const BASE = config.apiBaseUrl;
 export interface LogMealApiResponse {
   meal: {
     id: string;
-    items: Array<{ name: string; qty: number; matched: boolean; nutrition: { calories: number; protein: number; carbs: number; fats: number } }>;
+    items: Array<{ food_id: string; name: string; qty: number; matched: boolean; nutrition: { calories: number; protein: number; carbs: number; fats: number } }>;
     total: { calories: number; protein: number; carbs: number; fats: number };
     confidence: number;
     estimated: boolean;
     unmatched: string[];
+    quantity_warnings?: string[];
   };
   daily: {
     consumed: { calories: number; protein: number; carbs: number; fats: number };

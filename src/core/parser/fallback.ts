@@ -161,6 +161,7 @@ function applyGeminiMapping(
     confidence: Math.max(parseResult.confidence, newConfidence),
     method: newMethod,
     unmatched: newUnmatched,
+    quantity_warnings: parseResult.quantity_warnings,
   };
 
   logger.info('fallback', 'mapping_done', `method=${newMethod} confidence=${result.confidence} remapped=${fallbackLog.remapped_items.length}`, ctx);
