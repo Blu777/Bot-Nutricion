@@ -5,6 +5,7 @@ import { config, validateEnv } from './config/index.js';
 import { waitForDb } from './db/client.js';
 import { logger } from './lib/logger.js';
 import { requestContext } from './api/middleware/request-context.js';
+import { apiKeyAuth } from './api/middleware/auth.js';
 import { mealRoutes } from './api/routes/meal.js';
 import { summaryRoutes } from './api/routes/summary.js';
 import { recommendationRoutes } from './api/routes/recommendation.js';
@@ -14,6 +15,8 @@ import { healthRoutes } from './api/routes/health.js';
 import { metricsRoutes } from './api/routes/metrics.js';
 import { debugRoutes } from './api/routes/debug.js';
 import { adminRoutes } from './api/routes/admin.js';
+import { observabilityRoutes } from './api/routes/observability.js';
+import { userRoutes } from './api/routes/user.js';
 import { startBot } from './bot/index.js';
 
 validateEnv(['DATABASE_URL', 'GEMINI_API_KEY', 'TELEGRAM_BOT_TOKEN']);
@@ -53,16 +56,23 @@ app.get('/', (c) => {
   return c.json({ status: 'ok', service: 'nutrition-bot', version: '1.0.0' });
 });
 
-// Routes
+// Routes (public — no auth)
 app.route('/', healthRoutes);
 app.route('/', metricsRoutes);
-app.route('/', debugRoutes);
-app.route('/', adminRoutes);
+app.route('/', observabilityRoutes);
+
+// Protected API routes (require x-api-secret header)
+app.use('/api/*', apiKeyAuth);
 app.route('/api', mealRoutes);
 app.route('/api', summaryRoutes);
 app.route('/api', recommendationRoutes);
 app.route('/api', onboardRoutes);
 app.route('/api', undoRoutes);
+app.route('/api', userRoutes);
+
+// Admin / debug (keep public for now, or protect separately)
+app.route('/', debugRoutes);
+app.route('/', adminRoutes);
 
 logger.info('api', 'server_start', `Listening on port ${config.port}`);
 

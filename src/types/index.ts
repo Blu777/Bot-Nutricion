@@ -112,5 +112,10 @@ export interface LogMealResponse {
   recommendation: {
     text: string;
     suggested_foods: string[];
+    variations: Array<{
+      text: string;
+      foods: string[];
+      estimated_macros: NutritionValues;
+    }>;
   };
 }

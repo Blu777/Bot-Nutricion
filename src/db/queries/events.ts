@@ -7,7 +7,8 @@ export type EventType =
   | 'undo_meal'
   | 'gemini_usage'
   | 'unknown_food'
-  | 'parse_failure';
+  | 'parse_failure'
+  | 'profile_updated';
 
 export async function trackEvent(
   userId: string | null,

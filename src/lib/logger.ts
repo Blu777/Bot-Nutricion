@@ -3,7 +3,7 @@
 // Format: { level, scope, event, message, meta, ts }
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
-export type LogScope = 'api' | 'bot' | 'parser' | 'fallback' | 'db' | 'config';
+export type LogScope = 'api' | 'bot' | 'parser' | 'fallback' | 'db' | 'config' | 'ontology';
 
 export interface LogEntry {
   level: LogLevel;

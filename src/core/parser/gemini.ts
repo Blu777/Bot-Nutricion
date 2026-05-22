@@ -87,6 +87,9 @@ Identificá qué alimentos son y mapeá al diccionario.`;
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.gemini.model}:generateContent?key=${apiKey}`;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -99,7 +102,10 @@ Identificá qué alimentos son y mapeá al diccionario.`;
           maxOutputTokens: 1024,
         },
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.log(`[gemini] API error: ${response.status} ${response.statusText}`);

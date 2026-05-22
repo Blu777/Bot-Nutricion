@@ -27,7 +27,12 @@ const WORD_NUMBERS: Record<string, number> = {
   'medio': 0.5, 'media': 0.5,
   'dos': 2, 'tres': 3, 'cuatro': 4, 'cinco': 5,
   'seis': 6, 'siete': 7, 'ocho': 8, 'nueve': 9, 'diez': 10,
+  'chorro': 1, 'chorrito': 1,
+  'gusto': 1, 'pizca': 1,
 };
+
+// Vague quantity phrases that should trigger a warning
+const VAGUE_QUANTITY_PHRASES = ['a gusto', 'al gusto', 'un chorro de', 'una pizca de'];
 
 // CORREGIDO 2026-05-22 — Plurales sin cantidad explícita
 // ASSUME_TWO: plural donde la porción mínima razonable es 2
@@ -186,6 +191,19 @@ function parseSegment(segment: string): Token | null {
       assumedQty: true,
       pluralWarning: `¿Cuántas/os ${foodText} comiste? Registré 1 por ahora.`,
     };
+  }
+
+  // Detect vague quantity phrases
+  for (const phrase of VAGUE_QUANTITY_PHRASES) {
+    if (foodLower.includes(phrase)) {
+      return {
+        quantity: 1,
+        unit: 'portion',
+        foodText,
+        assumedQty: true,
+        pluralWarning: `La cantidad "${phrase}" es ambigua. Asumí 1 porción, podés ajustarla.`,
+      };
+    }
   }
 
   return { quantity: 1, unit: 'portion', foodText };

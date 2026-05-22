@@ -40,6 +40,7 @@
         psql -c "CREATE INDEX IF NOT EXISTS idx_food_aliases ON food_dictionary USING GIN(aliases);"
         psql -c "CREATE TABLE IF NOT EXISTS meals (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id UUID REFERENCES users(id) NOT NULL, raw_text TEXT NOT NULL, parsed_items JSONB NOT NULL DEFAULT '[]', nutrition JSONB NOT NULL DEFAULT '{}', parse_method TEXT NOT NULL CHECK (parse_method IN ('dictionary', 'gemini', 'hybrid')), confidence DECIMAL(3,2) DEFAULT 1.0, logged_at TIMESTAMPTZ DEFAULT NOW(), date DATE NOT NULL DEFAULT CURRENT_DATE);"
         psql -c "CREATE INDEX IF NOT EXISTS idx_meals_user_date ON meals(user_id, date);"
+        psql -c "CREATE INDEX IF NOT EXISTS idx_meals_logged_at ON meals(user_id, logged_at DESC);"
         psql -c "CREATE TABLE IF NOT EXISTS daily_logs (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id UUID REFERENCES users(id) NOT NULL, date DATE NOT NULL, nutrition_totals JSONB NOT NULL DEFAULT '{\"calories\": 0, \"protein\": 0, \"carbs\": 0, \"fats\": 0}', targets_snapshot JSONB NOT NULL DEFAULT '{}', meal_count INTEGER DEFAULT 0, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW(), UNIQUE(user_id, date));"
         psql -c "CREATE INDEX IF NOT EXISTS idx_daily_logs_user_date ON daily_logs(user_id, date);"
         psql -c "CREATE TABLE IF NOT EXISTS events (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id UUID REFERENCES users(id), type TEXT NOT NULL, metadata JSONB DEFAULT '{}', created_at TIMESTAMPTZ DEFAULT NOW());"
@@ -63,6 +64,7 @@
       PORT: 3000
       DATABASE_URL: postgresql://postgres:postgres@db:5432/nutrition
       API_BASE_URL: http://api:3000
+      API_SECRET: CHANGE_ME
       GEMINI_API_KEY: CHANGE_ME
       GEMINI_MODEL: gemini-2.5-flash-lite
       TELEGRAM_BOT_TOKEN: disabled
@@ -84,6 +86,7 @@
       NODE_ENV: production
       DATABASE_URL: postgresql://postgres:postgres@db:5432/nutrition
       API_BASE_URL: http://api:3000
+      API_SECRET: CHANGE_ME
       GEMINI_API_KEY: CHANGE_ME
       GEMINI_MODEL: gemini-2.5-flash-lite
       TELEGRAM_BOT_TOKEN: CHANGE_ME

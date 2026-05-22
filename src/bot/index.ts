@@ -3,16 +3,26 @@
 
 import { Bot, Context, session } from 'grammy';
 import { config } from '../config/index.js';
-import { logMeal, getDailySummary, getRecommendation, onboardUser, undoLastMeal } from './api-client.js';
-import { formatMealLogged, formatSummary, formatRecommendation, formatOnboardSuccess, formatUndo, formatStatus, formatError } from './formatter.js';
+import { logMeal, getDailySummary, getRecommendation, onboardUser, undoLastMeal, getUserProfile, updateProfile } from './api-client.js';
+import { formatMealLogged, formatSummary, formatRecommendation, formatOnboardSuccess, formatUndo, formatStatus, formatProfileUpdated, formatError } from './formatter.js';
 import { logger } from '../lib/logger.js';
 
 // ─── Session (tracks onboarding state) ──────────────────────
 
 interface SessionData {
-  step: 'idle' | 'awaiting_goal' | 'awaiting_weight';
+  step:
+    | 'idle'
+    | 'awaiting_goal'
+    | 'awaiting_weight'
+    | 'awaiting_update_choice'
+    | 'awaiting_update_weight'
+    | 'awaiting_update_goal';
   name: string | null;
   goal: string | null;
+  // Update profile temp state
+  update_choice?: 'weight' | 'goal' | 'both';
+  update_weight?: number | null;
+  update_goal?: string | null;
 }
 
 type BotContext = Context & { session: SessionData };
@@ -45,6 +55,58 @@ export function createBot(): Bot<BotContext> {
     await ctx.reply(
       `¡Hola ${name}! 👋\nSoy tu bot de nutrición.\n\n¿Cuál es tu objetivo?\n\n1️⃣ Perder grasa\n2️⃣ Mantener peso\n3️⃣ Ganar músculo\n\nRespondé con 1, 2 o 3.`,
     );
+  });
+
+  // ── /updateprofile → update weight or goal ──────────────
+  bot.command('updateprofile', async (ctx) => {
+    const telegramId = ctx.from?.id;
+    if (!telegramId) return;
+    logger.info('bot', 'command', '/updateprofile', { user_id: String(telegramId) });
+
+    try {
+      const profile = await getUserProfile(telegramId);
+      ctx.session.step = 'awaiting_update_choice';
+      ctx.session.update_choice = undefined;
+      ctx.session.update_weight = undefined;
+      ctx.session.update_goal = undefined;
+
+      await ctx.reply(
+        `📋 Tu perfil actual:\n` +
+        `• Peso: ${profile.weight_kg} kg\n` +
+        `• Objetivo: ${profile.goal_label}\n` +
+        `• Targets: ${profile.targets.calories} cal / ${profile.targets.protein}g prot\n\n` +
+        `¿Qué querés actualizar?\n\n` +
+        `1️⃣ Peso\n` +
+        `2️⃣ Objetivo\n` +
+        `3️⃣ Ambos\n\n` +
+        `Respondé 1, 2 o 3. (O /cancel para salir)`,
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      logger.error('bot', 'command_error', `/updateprofile failed: ${msg}`, { user_id: String(telegramId) });
+      await ctx.reply(formatError(msg));
+    }
+  });
+
+  // ── /cancel → abort any active flow ───────────────────────
+  bot.command('cancel', async (ctx) => {
+    const telegramId = ctx.from?.id;
+    if (!telegramId) return;
+
+    const wasActive =
+      ctx.session.step === 'awaiting_update_choice' ||
+      ctx.session.step === 'awaiting_update_weight' ||
+      ctx.session.step === 'awaiting_update_goal';
+
+    if (wasActive) {
+      ctx.session.step = 'idle';
+      ctx.session.update_choice = undefined;
+      ctx.session.update_weight = undefined;
+      ctx.session.update_goal = undefined;
+      await ctx.reply('❌ Cancelado. Perfil sin cambios.');
+    } else {
+      await ctx.reply('No había ningún proceso activo para cancelar.');
+    }
   });
 
   // ── /undo → delete last meal ──────────────────────────────
@@ -117,6 +179,7 @@ export function createBot(): Bot<BotContext> {
       `📋 Comandos:\n` +
       `/status — Estado rápido\n` +
       `/summary — Resumen completo\n` +
+      `/updateprofile — Actualizar tu peso u objetivo\n` +
       `/recommend — Qué comer\n` +
       `/undo — Deshacer última comida\n` +
       `/help — Ver comandos\n\n` +
@@ -130,6 +193,107 @@ export function createBot(): Bot<BotContext> {
     if (!telegramId) return;
 
     const text = ctx.message.text.trim();
+
+    // ── Update profile step 1: choice ───────────────────────
+    if (ctx.session.step === 'awaiting_update_choice') {
+      const choiceMap: Record<string, 'weight' | 'goal' | 'both'> = {
+        '1': 'weight',
+        '2': 'goal',
+        '3': 'both',
+        'peso': 'weight',
+        'objetivo': 'goal',
+        'ambos': 'both',
+      };
+      const choice = choiceMap[text.toLowerCase()];
+
+      if (!choice) {
+        await ctx.reply('Elegí una opción:\n1️⃣ Peso\n2️⃣ Objetivo\n3️⃣ Ambos\n\nRespondé 1, 2 o 3. (O /cancel)');
+        return;
+      }
+
+      ctx.session.update_choice = choice;
+
+      if (choice === 'weight' || choice === 'both') {
+        ctx.session.step = 'awaiting_update_weight';
+        await ctx.reply('¿Cuál es tu nuevo peso? (en kg, ej: 75)');
+      } else {
+        ctx.session.step = 'awaiting_update_goal';
+        await ctx.reply(
+          '¿Cuál es tu nuevo objetivo?\n\n1️⃣ Perder grasa\n2️⃣ Mantener peso\n3️⃣ Ganar músculo\n\nRespondé 1, 2 o 3.',
+        );
+      }
+      return;
+    }
+
+    // ── Update profile step 2: weight ───────────────────────
+    if (ctx.session.step === 'awaiting_update_weight') {
+      const weight = parseFloat(text.replace(',', '.'));
+
+      if (isNaN(weight) || weight < 30 || weight > 300) {
+        await ctx.reply('Mandame tu peso en kg (número entre 30 y 300). Ej: 75');
+        return;
+      }
+
+      ctx.session.update_weight = weight;
+
+      if (ctx.session.update_choice === 'both') {
+        ctx.session.step = 'awaiting_update_goal';
+        await ctx.reply(
+          '¿Cuál es tu nuevo objetivo?\n\n1️⃣ Perder grasa\n2️⃣ Mantener peso\n3️⃣ Ganar músculo\n\nRespondé 1, 2 o 3.',
+        );
+      } else {
+        // Only weight → call API
+        try {
+          const data = await updateProfile(telegramId, weight, undefined);
+          ctx.session.step = 'idle';
+          await ctx.reply(formatProfileUpdated(data));
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : '';
+          ctx.session.step = 'idle';
+          await ctx.reply(formatError(msg));
+        }
+      }
+      return;
+    }
+
+    // ── Update profile step 3: goal ─────────────────────────
+    if (ctx.session.step === 'awaiting_update_goal') {
+      const goalMap: Record<string, string> = {
+        '1': 'lose_fat',
+        '2': 'maintain',
+        '3': 'gain_muscle',
+        'perder': 'lose_fat',
+        'mantener': 'maintain',
+        'ganar': 'gain_muscle',
+      };
+
+      const goal = goalMap[text.toLowerCase()];
+      if (!goal) {
+        await ctx.reply('Elegí una opción:\n1️⃣ Perder grasa\n2️⃣ Mantener peso\n3️⃣ Ganar músculo\n\nRespondé 1, 2 o 3.');
+        return;
+      }
+
+      ctx.session.update_goal = goal;
+
+      const weightToSend = ctx.session.update_choice === 'both' ? ctx.session.update_weight : undefined;
+
+      try {
+        const data = await updateProfile(telegramId, weightToSend ?? undefined, goal);
+        ctx.session.step = 'idle';
+        ctx.session.update_choice = undefined;
+        ctx.session.update_weight = undefined;
+        ctx.session.update_goal = undefined;
+        await ctx.reply(formatProfileUpdated(data));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : '';
+        ctx.session.step = 'idle';
+        ctx.session.update_choice = undefined;
+        ctx.session.update_weight = undefined;
+        ctx.session.update_goal = undefined;
+        await ctx.reply(formatError(msg));
+      }
+      return;
+    }
 
     // ── Onboarding step 1: goal selection ───────────────────
     if (ctx.session.step === 'awaiting_goal') {

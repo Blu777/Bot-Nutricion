@@ -7,6 +7,8 @@ export interface MatchResult {
   originalText: string;
 }
 
+const MIN_MATCH_CONFIDENCE = 0.55;
+
 export function matchFood(foodText: string, dictionary: FoodEntry[]): MatchResult {
   const normalized = normalize(foodText);
   if (!normalized) return { food: null, confidence: 0, originalText: foodText };
@@ -92,7 +94,7 @@ export function matchFood(foodText: string, dictionary: FoodEntry[]): MatchResul
       }
     }
   }
-  if (bestFuzzy) {
+  if (bestFuzzy && bestFuzzy.confidence >= MIN_MATCH_CONFIDENCE) {
     return { food: bestFuzzy.food, confidence: bestFuzzy.confidence, originalText: foodText };
   }
 

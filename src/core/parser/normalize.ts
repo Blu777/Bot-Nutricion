@@ -99,9 +99,23 @@ const COMPOUND_PHRASES: string[] = [
   'ensalada de tomate',
   // Fish
   'atun en lata',
-  // Eggs
+  // Eggs — preparation compounds must NOT be split
+  'huevo duro',
+  'huevo frito',
+  'huevo revuelto',
+  'huevos duros',
+  'huevos fritos',
   'huevos revueltos',
   'huevo a caballo',
+  // Chicken preparations
+  'pollo frito',
+  'pollo hervido',
+  'pollo al horno',
+  'pollo a la plancha',
+  'pollo grillado',
+  // Milanesa preparations
+  'milanesa al horno',
+  'milanesa frita',
   // Grains
   'guiso de lentejas',
   'guiso de arroz',

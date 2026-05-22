@@ -18,13 +18,8 @@ export const config = {
     botToken: process.env.TELEGRAM_BOT_TOKEN || '',
   },
   apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:3000',
+  apiSecret: process.env.API_SECRET || '',
   defaults: {
     timezone: 'America/Argentina/Buenos_Aires',
-    genericFood: {
-      calories: 200,
-      protein: 10,
-      carbs: 20,
-      fats: 10,
-    },
   },
 } as const;

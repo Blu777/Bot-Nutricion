@@ -135,12 +135,14 @@ const foods = [
   {
     id: 'huevo',
     name: 'Huevo entero',
-    aliases: ['huevo', 'huevos', 'huevo frito', 'huevo duro', 'huevo revuelto'],
+    aliases: ['huevo', 'huevos', 'huevo frito', 'huevo duro', 'huevo revuelto', 'huevo hervido', 'huevo cocido'],
     category: 'huevos',
     portion_size: 60,
     portion_unit: 'g',
-    nutrition_per_portion: { calories: 85, protein: 7, carbs: 0.5, fats: 6 },
-    nutrition_per_100g: { calories: 142, protein: 12, carbs: 1, fats: 10 },
+    // USDA FoodData Central #748967 — Egg, whole, cooked, hard-boiled
+    // 60g portion (1 huevo mediano neto): 93 kcal, 7.8g protein, 0.7g carbs, 6.4g fat
+    nutrition_per_portion: { calories: 93, protein: 7.8, carbs: 0.7, fats: 6.4 },
+    nutrition_per_100g: { calories: 155, protein: 13, carbs: 1.1, fats: 10.6 },
     is_composite: false,
     tags: ['proteina'],
   },
@@ -369,7 +371,19 @@ const foods = [
     is_composite: false,
     tags: ['carbohidrato'],
   },
-  // ─── Frutas ─────────────────────────────────────────────────
+  // ─── Frutas / Verduras ─────────────────────────────────────
+  {
+    id: 'palta',
+    name: 'Palta / Aguacate',
+    aliases: ['palta', 'paltas', 'aguacate', 'aguacates', 'avocado'],
+    category: 'verduras',
+    portion_size: 100,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 160, protein: 2, carbs: 8.5, fats: 14.7 },
+    nutrition_per_100g: { calories: 160, protein: 2, carbs: 8.5, fats: 14.7 },
+    is_composite: false,
+    tags: ['grasa_saludable', 'desayuno'],
+  },
   {
     id: 'banana',
     name: 'Banana',
@@ -447,7 +461,7 @@ const foods = [
   {
     id: 'medialuna',
     name: 'Medialuna',
-    aliases: ['medialuna', 'medialunas', 'medias lunas', 'facturas'],
+    aliases: ['medialuna', 'medialunas', 'medias lunas', 'facturas', 'medialuna de manteca', 'medialunas de manteca'],
     category: 'panaderia',
     portion_size: 50,
     portion_unit: 'g',

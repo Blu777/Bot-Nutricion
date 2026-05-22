@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { parseMealText } from '../../core/parser/index.js';
 import { applyGeminiFallback } from '../../core/parser/fallback.js';
+import { estimateNutritionWithGemini } from '../../core/parser/gemini-estimator.js';
 import { calculateMealNutrition, calculateItemNutrition, calculateRemaining } from '../../core/nutrition/calculator.js';
 import { generateRecommendation } from '../../core/recommendation/engine.js';
 import { getUserByTelegramId } from '../../db/queries/users.js';
@@ -11,6 +12,7 @@ import { trackEvent } from '../../db/queries/events.js';
 import { trackUnknownFood } from '../../db/queries/unknown-foods.js';
 import { logger } from '../../lib/logger.js';
 import { metrics } from '../../lib/metrics.js';
+import { config } from '../../config/index.js';
 import type { LogMealRequest, FoodEntry, NutritionValues } from '../../types/index.js';
 
 const mealRoutes = new Hono();
@@ -86,9 +88,31 @@ mealRoutes.post('/log-meal', async (c) => {
     return c.json({ error: { type: 'PARSE_ERROR', message: 'No pude interpretar la comida. Intentá ser más específico.', request_id: requestId } }, 422);
   }
 
-  // 4. Calculate nutrition
+  // 4. Estimate nutrition for any remaining unmatched items via Gemini
   const foodMap = getFoodMap();
-  const mealNutrition = calculateMealNutrition(parseResult.items, foodMap);
+  const unknownEstimates = new Map<string, NutritionValues>();
+  const unmatchedItems = parseResult.items.filter((i) => !i.matched);
+  if (unmatchedItems.length > 0 && config.gemini.apiKey) {
+    for (const item of unmatchedItems) {
+      const grams = item.grams ?? (item.unit === 'g' || item.unit === 'ml' ? item.qty : 100);
+      const estimate = await estimateNutritionWithGemini(item.name, grams);
+      if (estimate) {
+        unknownEstimates.set(item.name, {
+          calories: estimate.calories,
+          protein: estimate.protein,
+          carbs: estimate.carbs,
+          fats: estimate.fats,
+        });
+        logger.info('fallback', 'gemini_nutrition_estimate', `${item.name} (${grams}g) → ${Math.round(estimate.calories)} cal`, {
+          request_id: requestId,
+          user_id: user.id,
+        });
+      }
+    }
+  }
+
+  // 4b. Calculate nutrition (with pre-computed estimates for unknowns)
+  const mealNutrition = calculateMealNutrition(parseResult.items, foodMap, unknownEstimates);
 
   // 5. Get user's local date
   const userDate = getUserLocalDate(user.timezone);
@@ -136,7 +160,7 @@ mealRoutes.post('/log-meal', async (c) => {
         name: item.name,
         qty: item.qty,
         matched: item.matched,
-        nutrition: calculateItemNutrition(item, foodMap),
+        nutrition: calculateItemNutrition(item, foodMap, unknownEstimates),
       })),
       total: mealNutrition,
       confidence: parseResult.confidence,

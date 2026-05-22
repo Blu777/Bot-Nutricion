@@ -1,7 +1,7 @@
 // ─── Telegram Message Formatter ──────────────────────────────
 // Formats API responses into short, natural Spanish messages.
 
-import type { LogMealApiResponse, SummaryApiResponse, RecommendApiResponse, UndoMealApiResponse } from './api-client.js';
+import type { LogMealApiResponse, SummaryApiResponse, RecommendApiResponse, UndoMealApiResponse, UpdateProfileApiResponse } from './api-client.js';
 
 export function formatMealLogged(data: LogMealApiResponse): string {
   const { meal, daily, recommendation } = data;
@@ -91,6 +91,13 @@ export function formatMealLogged(data: LogMealApiResponse): string {
     msg += `\n\n💡 ${recommendation.text}`;
   }
 
+  if (recommendation.variations && recommendation.variations.length > 1) {
+    msg += '\n\n📋 Más opciones:';
+    recommendation.variations.slice(1, 4).forEach((v, i) => {
+      msg += `\n${i + 1}. ${v.text} (~${Math.round(v.estimated_macros.calories)} cal)`;
+    });
+  }
+
   return msg;
 }
 
@@ -111,7 +118,15 @@ export function formatSummary(data: SummaryApiResponse): string {
 }
 
 export function formatRecommendation(data: RecommendApiResponse): string {
-  return `💡 ${data.recommendation.text}`;
+  let msg = `💡 ${data.recommendation.text}`;
+  const vars = data.recommendation.variations;
+  if (vars && vars.length > 1) {
+    msg += '\n\n📋 Otras opciones que se ajustan a tus macros:';
+    vars.slice(1).forEach((v, i) => {
+      msg += `\n${i + 1}. ${v.text} (~${Math.round(v.estimated_macros.calories)} cal, ${Math.round(v.estimated_macros.protein)}g prot)`;
+    });
+  }
+  return msg;
 }
 
 export function formatOnboardSuccess(targets: { calories: number; protein: number; carbs: number; fats: number }): string {
@@ -149,6 +164,35 @@ export function formatUndo(data: UndoMealApiResponse): string {
   let msg = `↩️ Deshecho: "${data.undone.text}"`;
   msg += `\n(-${data.undone.nutrition.protein}g prot, -${data.undone.nutrition.calories} cal)`;
   msg += `\n\n📊 Hoy: ${data.daily.consumed.protein}/${data.daily.targets.protein}g prot · ${data.daily.consumed.calories}/${data.daily.targets.calories} cal`;
+  return msg;
+}
+
+export function formatProfileUpdated(data: UpdateProfileApiResponse): string {
+  const { previous, updated } = data;
+
+  const changedWeight = previous.weight_kg !== updated.weight_kg;
+  const changedGoal   = previous.goal !== updated.goal;
+
+  let msg = `✅ Perfil actualizado\n`;
+
+  if (changedWeight) {
+    msg += `\n⚖️ Peso: ${previous.weight_kg} → ${updated.weight_kg} kg`;
+  }
+  if (changedGoal) {
+    msg += `\n🎯 Objetivo: ${previous.goal_label} → ${updated.goal_label}`;
+  }
+
+  msg += `\n\n📊 Nuevos objetivos diarios:`;
+  msg += `\n• ${updated.targets.calories} cal`;
+  msg += `\n• ${updated.targets.protein}g proteína`;
+  msg += `\n• ${updated.targets.carbs}g carbos`;
+  msg += `\n• ${updated.targets.fats}g grasas`;
+
+  if (changedWeight || changedGoal) {
+    msg += `\n\n📉 Anterior:`;
+    msg += `\n${previous.targets.calories} cal · ${previous.targets.protein}g prot`;
+  }
+
   return msg;
 }
 
