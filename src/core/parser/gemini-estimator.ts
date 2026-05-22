@@ -100,10 +100,11 @@ function parseEstimate(
 
     const parsed = JSON.parse(cleaned) as Record<string, unknown>;
 
-    const calories = typeof parsed.calories === 'number' ? parsed.calories : 0;
-    const protein = typeof parsed.protein === 'number' ? parsed.protein : 0;
-    const carbs = typeof parsed.carbs === 'number' ? parsed.carbs : 0;
-    const fats = typeof parsed.fats === 'number' ? parsed.fats : 0;
+    const parseNum = (val: unknown) => typeof val === 'number' ? val : (typeof val === 'string' ? parseFloat(val) || 0 : 0);
+    const calories = parseNum(parsed.calories);
+    const protein = parseNum(parsed.protein);
+    const carbs = parseNum(parsed.carbs);
+    const fats = parseNum(parsed.fats);
     const confidence = typeof parsed.confidence === 'number' ? Math.min(1, Math.max(0, parsed.confidence)) : 0.5;
     const note = typeof parsed.note === 'string' ? parsed.note : 'Estimado por Gemini';
 

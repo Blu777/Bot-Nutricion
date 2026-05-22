@@ -810,6 +810,18 @@ const foods = [
     tags: ['bajo_calorias'],
   },
   {
+    id: 'zanahoria',
+    name: 'Zanahoria',
+    aliases: ['zanahoria', 'zanahorias', 'ensalada de zanahoria', 'zanahoria rallada'],
+    category: 'verduras',
+    portion_size: 100,
+    portion_unit: 'g',
+    nutrition_per_portion: { calories: 41, protein: 0.9, carbs: 10, fats: 0.2 },
+    nutrition_per_100g: { calories: 41, protein: 0.9, carbs: 10, fats: 0.2 },
+    is_composite: false,
+    tags: ['bajo_calorias', 'fibra'],
+  },
+  {
     id: 'zapallo',
     name: 'Zapallo',
     aliases: ['zapallo', 'calabaza', 'zapallito', 'zapallitos'],

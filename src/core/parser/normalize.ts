@@ -134,6 +134,8 @@ const MULTI_WORD_SLANG: Array<[string, string]> = [
   ['milas de pollo', 'milanesas de pollo'],
   ['mila al horno', 'milanesa al horno'],
   ['milas al horno', 'milanesas al horno'],
+  ['suprema de pollo', 'milanesa de pollo'],
+  ['supremas de pollo', 'milanesas de pollo'],
   ['huevo a caballo', 'huevo a caballo'],
   ['un par de', '2'],
   ['par de', '2'],

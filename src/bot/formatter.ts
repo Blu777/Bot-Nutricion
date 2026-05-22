@@ -13,12 +13,13 @@ export function formatMealLogged(data: LogMealApiResponse): string {
 
   let msg = `✅ Registrado:\n${items}`;
 
-  // Show clearer unmatched warning with item names
+  // Show clearer unmatched warning with item names and estimated calories
   if (meal.unmatched.length > 0) {
-    const genericCal = 210;
-    msg += `\n\n⚠️ No reconocí: "${meal.unmatched.join('", "')}"`;
-    msg += `\nEstimé ~${genericCal} cal por ítem (puede variar ±40%).`;
-    msg += `\nSi la porción fue muy diferente, decime el gramaje.`;
+    const unmatchedItems = meal.items.filter(i => !i.matched);
+    const itemEstimates = unmatchedItems.map(i => `${i.name} (~${Math.round(i.nutrition.calories)} cal)`).join(', ');
+    
+    msg += `\n\n⚠️ Valores estimados por IA para: ${itemEstimates}`;
+    msg += `\nSi la porción fue muy diferente, decime el gramaje exacto.`;
   }
 
   msg += `\n\n🥩 +${meal.total.protein}g prot · +${meal.total.calories} cal`;
