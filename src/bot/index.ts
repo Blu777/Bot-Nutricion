@@ -1,9 +1,9 @@
 // ─── Telegram Bot ────────────────────────────────────────────
 // Thin client: receives messages, calls backend API, formats responses.
 
-import { Bot, Context, session } from 'grammy';
+import { Bot, Context, session, InlineKeyboard } from 'grammy';
 import { config } from '../config/index.js';
-import { logMeal, getDailySummary, getRecommendation, onboardUser, undoLastMeal, getUserProfile, updateProfile } from './api-client.js';
+import { logMeal, getDailySummary, getRecommendation, onboardUser, undoLastMeal, getUserProfile, updateProfile, resetTodayMeals } from './api-client.js';
 import { formatMealLogged, formatSummary, formatRecommendation, formatOnboardSuccess, formatUndo, formatStatus, formatProfileUpdated, formatError } from './formatter.js';
 import { logger } from '../lib/logger.js';
 
@@ -125,6 +125,54 @@ export function createBot(): Bot<BotContext> {
     }
   });
 
+  // ── /reset → delete all meals today with confirmation ──────
+  bot.command('reset', async (ctx) => {
+    const telegramId = ctx.from?.id;
+    if (!telegramId) return;
+    logger.info('bot', 'command', '/reset', { user_id: String(telegramId) });
+
+    const keyboard = new InlineKeyboard()
+      .text('✅ Sí, borrar todo', `reset_confirm_${telegramId}`)
+      .text('❌ Cancelar', `reset_cancel_${telegramId}`);
+
+    await ctx.reply(
+      '⚠️ ¿Estás seguro de que querés borrar TODAS las comidas de hoy?\n\nEsta acción no se puede deshacer.',
+      { reply_markup: keyboard },
+    );
+  });
+
+  // ── Callback: confirm reset ────────────────────────────────
+  bot.callbackQuery(/^reset_confirm_(\d+)$/, async (ctx) => {
+    const telegramId = Number(ctx.match[1]);
+    if (!telegramId) {
+      await ctx.answerCallbackQuery('Error de identificación');
+      return;
+    }
+
+    await ctx.answerCallbackQuery('Borrando...');
+
+    try {
+      const data = await resetTodayMeals(telegramId);
+      await ctx.editMessageText(
+        `🗑️ ${data.deleted_count > 0 ? `Borradas ${data.deleted_count} comidas` : 'No había comidas registradas'} de hoy (${data.date}).`,
+      );
+
+      // Show fresh summary (now at zero)
+      const summary = await getDailySummary(telegramId);
+      await ctx.reply(formatSummary(summary));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      logger.error('bot', 'command_error', `/reset failed: ${msg}`, { user_id: String(telegramId) });
+      await ctx.editMessageText(`❌ No se pudo borrar: ${formatError(msg)}`);
+    }
+  });
+
+  // ── Callback: cancel reset ─────────────────────────────────
+  bot.callbackQuery(/^reset_cancel_(\d+)$/, async (ctx) => {
+    await ctx.answerCallbackQuery('Cancelado');
+    await ctx.editMessageText('❌ Borrado cancelado. No se eliminó nada.');
+  });
+
   // ── /summary → daily summary ─────────────────────────────
   bot.command('summary', async (ctx) => {
     const telegramId = ctx.from?.id;
@@ -182,6 +230,7 @@ export function createBot(): Bot<BotContext> {
       `/updateprofile — Actualizar tu peso u objetivo\n` +
       `/recommend — Qué comer\n` +
       `/undo — Deshacer última comida\n` +
+      `/reset — Borrar todas las comidas de hoy\n` +
       `/help — Ver comandos\n\n` +
       `Mandame lo que comiste y listo.`,
     );

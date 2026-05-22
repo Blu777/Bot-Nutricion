@@ -5,7 +5,7 @@ import { estimateNutritionWithGemini } from '../../core/parser/gemini-estimator.
 import { calculateMealNutrition, calculateItemNutrition, calculateRemaining } from '../../core/nutrition/calculator.js';
 import { generateRecommendation } from '../../core/recommendation/engine.js';
 import { getUserByTelegramId } from '../../db/queries/users.js';
-import { createMeal } from '../../db/queries/meals.js';
+import { createMeal, deleteTodayMeals } from '../../db/queries/meals.js';
 import { getOrCreateDailyLog, updateDailyLog } from '../../db/queries/daily-logs.js';
 import { getAllFoods } from '../../db/queries/food-dictionary.js';
 import { trackEvent } from '../../db/queries/events.js';
@@ -213,6 +213,34 @@ mealRoutes.post('/log-meal', async (c) => {
   }
 
   return c.json(response, 201);
+});
+
+mealRoutes.delete('/meals/today/:telegram_id', async (c) => {
+  const requestId = (c.get('requestId' as never) as string | undefined) ?? 'unknown';
+  const telegramId = Number(c.req.param('telegram_id'));
+
+  if (!telegramId) {
+    return c.json({ error: { type: 'USER_ERROR', message: 'telegram_id is required', request_id: requestId } }, 400);
+  }
+
+  const user = await getUserByTelegramId(telegramId);
+  if (!user) {
+    return c.json({ error: { type: 'USER_ERROR', message: 'User not found', request_id: requestId } }, 404);
+  }
+
+  const userDate = getUserLocalDate(user.timezone);
+  const deletedCount = await deleteTodayMeals(user.id, userDate);
+
+  // Reset daily log to zero so the summary reflects the deletion
+  const dailyLog = await getOrCreateDailyLog(user.id, userDate, user.targets);
+  await updateDailyLog(dailyLog.id, { calories: 0, protein: 0, carbs: 0, fats: 0 }, 0);
+
+  logger.info('api', 'reset_today', `user=${user.id} deleted=${deletedCount} date=${userDate}`, {
+    request_id: requestId,
+    user_id: user.id,
+  });
+
+  return c.json({ success: true, deleted_count: deletedCount, date: userDate });
 });
 
 function getUserLocalDate(timezone: string): string {

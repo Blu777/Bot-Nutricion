@@ -49,3 +49,11 @@ export async function getLastMeal(userId: string, date: string): Promise<Meal | 
 export async function deleteMeal(mealId: string): Promise<void> {
   await sql`DELETE FROM meals WHERE id = ${mealId}`;
 }
+
+export async function deleteTodayMeals(userId: string, date: string): Promise<number> {
+  const result = await sql`
+    DELETE FROM meals
+    WHERE user_id = ${userId} AND date = ${date}
+  `;
+  return (result as unknown as { count: number }).count ?? 0;
+}

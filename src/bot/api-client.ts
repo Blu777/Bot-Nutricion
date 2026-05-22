@@ -195,3 +195,23 @@ export async function updateProfile(
 
   return res.json() as Promise<UpdateProfileApiResponse>;
 }
+
+export interface ResetTodayApiResponse {
+  success: boolean;
+  deleted_count: number;
+  date: string;
+}
+
+export async function resetTodayMeals(telegramId: number): Promise<ResetTodayApiResponse> {
+  const res = await fetch(`${BASE}/api/meals/today/${telegramId}`, {
+    method: 'DELETE',
+    headers: apiHeaders(),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(err.error || `API error ${res.status}`);
+  }
+
+  return res.json() as Promise<ResetTodayApiResponse>;
+}
