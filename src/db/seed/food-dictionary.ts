@@ -942,7 +942,9 @@ async function seed() {
       await sql`
         INSERT INTO food_dictionary
           (id, name, aliases, category, portion_size, portion_unit,
-           nutrition_per_portion, nutrition_per_100g, is_composite, tags)
+           nutrition_per_portion, nutrition_per_100g, is_composite, tags,
+           cooking_method, cooking_note, cut_variance, estimation_note,
+           dressing_note, ask_dressing, typical_serving, serving_note)
         VALUES (
           ${food.id},
           ${food.name},
@@ -953,13 +955,29 @@ async function seed() {
           ${sql.json(food.nutrition_per_portion)},
           ${food.nutrition_per_100g ? sql.json(food.nutrition_per_100g) : null},
           ${food.is_composite},
-          ${sql.array(food.tags)}
+          ${sql.array(food.tags)},
+          ${'cooking_method' in food ? (food as any).cooking_method : null},
+          ${'cooking_note' in food ? (food as any).cooking_note : null},
+          ${'cut_variance' in food ? sql.json((food as any).cut_variance) : null},
+          ${'estimation_note' in food ? (food as any).estimation_note : null},
+          ${'dressing_note' in food ? (food as any).dressing_note : null},
+          ${'ask_dressing' in food ? (food as any).ask_dressing : false},
+          ${'typical_serving' in food ? (food as any).typical_serving : null},
+          ${'serving_note' in food ? (food as any).serving_note : null}
         )
         ON CONFLICT (id) DO UPDATE SET
           name                  = EXCLUDED.name,
           aliases               = EXCLUDED.aliases,
           nutrition_per_portion = EXCLUDED.nutrition_per_portion,
-          nutrition_per_100g    = EXCLUDED.nutrition_per_100g
+          nutrition_per_100g    = EXCLUDED.nutrition_per_100g,
+          cut_variance          = EXCLUDED.cut_variance,
+          estimation_note       = EXCLUDED.estimation_note,
+          dressing_note         = EXCLUDED.dressing_note,
+          ask_dressing          = EXCLUDED.ask_dressing,
+          typical_serving       = EXCLUDED.typical_serving,
+          serving_note          = EXCLUDED.serving_note,
+          cooking_method        = COALESCE(EXCLUDED.cooking_method, food_dictionary.cooking_method),
+          cooking_note          = COALESCE(EXCLUDED.cooking_note,   food_dictionary.cooking_note)
       `;
     }
     console.log(`✅ Successfully seeded ${foods.length} foods`);

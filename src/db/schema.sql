@@ -32,6 +32,14 @@ CREATE TABLE food_dictionary (
   nutrition_per_100g JSONB,
   is_composite BOOLEAN DEFAULT FALSE,
   tags TEXT[] DEFAULT '{}',
+  cooking_method  TEXT,
+  cooking_note    TEXT,
+  cut_variance    JSONB,
+  estimation_note TEXT,
+  dressing_note   TEXT,
+  ask_dressing    BOOLEAN DEFAULT FALSE,
+  typical_serving DECIMAL(6,1),
+  serving_note    TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
