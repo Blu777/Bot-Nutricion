@@ -14,6 +14,9 @@ RUN npm run build
 # ─── Stage 2: Runtime ────────────────────────────────────────
 FROM node:20-alpine AS runtime
 
+# Install curl for healthchecks
+RUN apk add --no-cache curl
+
 WORKDIR /app
 
 COPY package*.json ./
