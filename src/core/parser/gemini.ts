@@ -80,51 +80,67 @@ export async function callGemini(normalizedText: string, unmatchedItems: string[
     return null;
   }
 
-  const userPrompt = `Texto de comida: "${normalizedText}"
-Alimentos no reconocidos por el parser local: [${unmatchedItems.map((i) => `"${i}"`).join(', ')}]
+  // Sanitization: prevent prompt injection by limiting length and stripping suspicious chars
+  const safeText = normalizedText.slice(0, 150).replace(/[{}[\`\]]/g, '');
+  const safeUnmatched = unmatchedItems.map(i => i.slice(0, 50).replace(/[{}[\`\]]/g, ''));
+
+  const userPrompt = `Texto de comida: "${safeText}"
+Alimentos no reconocidos por el parser local: [${safeUnmatched.map((i) => `"${i}"`).join(', ')}]
 Identificá qué alimentos son y mapeá al diccionario.`;
 
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.gemini.model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.gemini.model}:generateContent?key=${apiKey}`;
+  const maxRetries = 2;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            { role: 'user', parts: [{ text: SYSTEM_PROMPT + '\n\n' + userPrompt }] },
+          ],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 1024,
+          },
+        }),
+        signal: controller.signal,
+      });
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          { role: 'user', parts: [{ text: SYSTEM_PROMPT + '\n\n' + userPrompt }] },
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 1024,
-        },
-      }),
-      signal: controller.signal,
-    });
+      clearTimeout(timeoutId);
 
-    clearTimeout(timeoutId);
+      if (!response.ok) {
+        if (response.status === 429 || response.status >= 500) {
+          throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+        console.log(`[gemini] Fatal API error: ${response.status} ${response.statusText}`);
+        return null;
+      }
 
-    if (!response.ok) {
-      console.log(`[gemini] API error: ${response.status} ${response.statusText}`);
-      return null;
+      const data = await response.json() as {
+        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      };
+
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      console.log('[gemini] Raw response:', rawText);
+
+      const foods = parseGeminiResponse(rawText);
+      return { foods, raw_response: rawText };
+    } catch (error) {
+      if (attempt === maxRetries) {
+        console.log('[gemini] Request failed after retries:', error instanceof Error ? error.message : String(error));
+        return null;
+      }
+      const delayMs = Math.pow(2, attempt) * 1000;
+      console.log(`[gemini] Attempt ${attempt + 1} failed, retrying in ${delayMs}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
-
-    const data = await response.json() as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    console.log('[gemini] Raw response:', rawText);
-
-    const foods = parseGeminiResponse(rawText);
-    return { foods, raw_response: rawText };
-  } catch (error) {
-    console.log('[gemini] Request failed:', error instanceof Error ? error.message : String(error));
-    return null;
   }
+  return null;
 }
 
 function parseGeminiResponse(rawText: string): GeminiFoodMapping[] {

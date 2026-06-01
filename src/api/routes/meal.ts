@@ -3,6 +3,7 @@ import { parseMealText } from '../../core/parser/index.js';
 import { applyGeminiFallback } from '../../core/parser/fallback.js';
 import { estimateNutritionWithGemini } from '../../core/parser/gemini-estimator.js';
 import { calculateMealNutrition, calculateItemNutrition, calculateRemaining } from '../../core/nutrition/calculator.js';
+import { auditMeal } from '../../core/auditor/index.js';
 import { resolveOntology } from '../../core/ontology/resolver.js';
 import { generateRecommendation } from '../../core/recommendation/engine.js';
 import { getUserByTelegramId } from '../../db/queries/users.js';
@@ -147,7 +148,13 @@ mealRoutes.post('/log-meal', async (c) => {
   // 5. Get user's local date
   const userDate = getUserLocalDate(user.timezone);
 
-  // 6. Save meal (stores raw_text, parsed_items, nutrition, confidence)
+  // 5b. Determine if it's a training day (basic heuristic for now)
+  const isTrainingDay = body.text.toLowerCase().includes('entrené') || body.text.toLowerCase().includes('entrene') || body.text.toLowerCase().includes('gym');
+
+  // 5c. Audit the meal against the clinical plan
+  const auditResult = auditMeal(parseResult.items, isTrainingDay);
+
+  // 6. Save meal (stores raw_text, parsed_items, nutrition, confidence, status)
   const meal = await createMeal({
     user_id: user.id,
     raw_text: body.text,
@@ -156,17 +163,19 @@ mealRoutes.post('/log-meal', async (c) => {
     parse_method: parseResult.method,
     confidence: parseResult.confidence,
     date: userDate,
+    status: auditResult.status,
+    missing_components: auditResult.missing_components,
   });
 
   // 7. Update daily log incrementally
-  const dailyLog = await getOrCreateDailyLog(user.id, userDate, user.targets);
+  const dailyLog = await getOrCreateDailyLog(user.id, userDate, user.targets, isTrainingDay);
   const newTotals: NutritionValues = {
     calories: (dailyLog.nutrition_totals.calories || 0) + mealNutrition.calories,
     protein: (dailyLog.nutrition_totals.protein || 0) + mealNutrition.protein,
     carbs: (dailyLog.nutrition_totals.carbs || 0) + mealNutrition.carbs,
     fats: (dailyLog.nutrition_totals.fats || 0) + mealNutrition.fats,
   };
-  await updateDailyLog(dailyLog.id, newTotals, dailyLog.meal_count + 1);
+  await updateDailyLog(dailyLog.id, newTotals, dailyLog.meal_count + 1, isTrainingDay);
 
   // 8. Calculate remaining
   const remaining = calculateRemaining(user.targets, newTotals);
@@ -179,7 +188,7 @@ mealRoutes.post('/log-meal', async (c) => {
   const hasEstimated = parseResult.items.some((item) => !item.matched);
 
   // 11. Build human-readable message
-  const message = buildMessage(mealNutrition, newTotals, user.targets, hasEstimated);
+  const message = buildMessage(mealNutrition, newTotals, user.targets, hasEstimated, auditResult);
 
   // 12. Build response
   const response = {
@@ -282,6 +291,7 @@ function buildMessage(
   totals: NutritionValues,
   targets: NutritionValues,
   estimated: boolean,
+  auditResult?: { status: string; missing_components: string[]; penalties: string[] }
 ): string {
   const prefix = estimated ? '⚠️ Algunos alimentos fueron estimados.\n' : '';
   const protRemaining = Math.max(0, targets.protein - totals.protein);
@@ -295,6 +305,16 @@ function buildMessage(
     msg += `\nTe faltan ~${protRemaining}g de proteína y ~${calRemaining} cal.`;
   } else {
     msg += '\n¡Objetivo de proteína alcanzado!';
+  }
+
+  if (auditResult) {
+    if (auditResult.status === 'incompleto') {
+      msg += `\n\n⚠️ Comida Incompleta. Faltantes: ${auditResult.missing_components.join(', ')}`;
+    } else if (auditResult.status === 'fuera_de_plan') {
+      msg += `\n\n🚫 Fuera de Plan: ${auditResult.penalties.join(', ')}`;
+    } else {
+      msg += `\n\n✅ Comida Aprobada.`;
+    }
   }
 
   return msg;

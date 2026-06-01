@@ -74,6 +74,8 @@ export interface Meal {
   confidence: number;
   logged_at: string;
   date: string;
+  status: string;
+  missing_components: string[];
 }
 
 // ─── Daily Log ───────────────────────────────────────────────
@@ -85,6 +87,7 @@ export interface DailyLog {
   nutrition_totals: NutritionValues;
   targets_snapshot: NutritionValues;
   meal_count: number;
+  is_training_day?: boolean;
 }
 
 // ─── API ─────────────────────────────────────────────────────

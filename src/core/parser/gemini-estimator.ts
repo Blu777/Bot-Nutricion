@@ -44,47 +44,63 @@ export async function estimateNutritionWithGemini(
     return null;
   }
 
-  const userPrompt = `Alimento: "${foodName}"
+  // Sanitization: limit length and strip special characters to prevent prompt injection
+  const safeName = foodName.slice(0, 150).replace(/[{}[\`\]]/g, '');
+
+  const userPrompt = `Alimento: "${safeName}"
 Peso aproximado: ${grams}g
 Estimá los macros para ese peso exacto.`;
 
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.gemini.model}:generateContent?key=${apiKey}`;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.gemini.model}:generateContent?key=${apiKey}`;
+  const maxRetries = 2;
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          { role: 'user', parts: [{ text: SYSTEM_PROMPT + '\n\n' + userPrompt }] },
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 256,
-        },
-      }),
-      signal: controller.signal,
-    });
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-    clearTimeout(timeoutId);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            { role: 'user', parts: [{ text: SYSTEM_PROMPT + '\n\n' + userPrompt }] },
+          ],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 256,
+          },
+        }),
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
-      console.log(`[gemini-estimator] API error: ${response.status}`);
-      return null;
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        if (response.status === 429 || response.status >= 500) {
+          throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+        console.log(`[gemini-estimator] Fatal API error: ${response.status}`);
+        return null;
+      }
+
+      const data = await response.json() as {
+        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      };
+
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      return parseEstimate(rawText, foodName, grams);
+    } catch (error) {
+      if (attempt === maxRetries) {
+        console.log('[gemini-estimator] Request failed after retries:', error instanceof Error ? error.message : String(error));
+        return null;
+      }
+      const delayMs = Math.pow(2, attempt) * 1000;
+      console.log(`[gemini-estimator] Attempt ${attempt + 1} failed, retrying in ${delayMs}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
-
-    const data = await response.json() as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    return parseEstimate(rawText, foodName, grams);
-  } catch (error) {
-    console.log('[gemini-estimator] Request failed:', error instanceof Error ? error.message : String(error));
-    return null;
   }
+  return null;
 }
 
 function parseEstimate(
@@ -99,6 +115,17 @@ function parseEstimate(
     }
 
     const parsed = JSON.parse(cleaned) as Record<string, unknown>;
+
+    // Strict structure validation
+    if (
+      typeof parsed.calories !== 'number' || isNaN(parsed.calories) ||
+      typeof parsed.protein !== 'number' || isNaN(parsed.protein) ||
+      typeof parsed.carbs !== 'number' || isNaN(parsed.carbs) ||
+      typeof parsed.fats !== 'number' || isNaN(parsed.fats)
+    ) {
+      console.log('[gemini-estimator] Rejected invalid JSON structure: missing or non-numeric macros');
+      return null;
+    }
 
     const parseNum = (val: unknown) => typeof val === 'number' ? val : (typeof val === 'string' ? parseFloat(val) || 0 : 0);
     const calories = parseNum(parsed.calories);

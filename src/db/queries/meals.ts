@@ -9,9 +9,11 @@ export async function createMeal(params: {
   parse_method: string;
   confidence: number;
   date: string;
+  status?: string;
+  missing_components?: string[];
 }): Promise<Meal> {
   const rows = await sql<Meal[]>`
-    INSERT INTO meals (user_id, raw_text, parsed_items, nutrition, parse_method, confidence, date)
+    INSERT INTO meals (user_id, raw_text, parsed_items, nutrition, parse_method, confidence, date, status, missing_components)
     VALUES (
       ${params.user_id},
       ${params.raw_text},
@@ -19,7 +21,9 @@ export async function createMeal(params: {
       ${sql.json(params.nutrition as any)},
       ${params.parse_method},
       ${params.confidence},
-      ${params.date}
+      ${params.date},
+      ${params.status ?? 'pendiente'},
+      ${sql.json(params.missing_components ?? [])}
     )
     RETURNING *
   `;
