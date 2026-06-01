@@ -245,15 +245,15 @@ export function createBot(): Bot<BotContext> {
 
     // ── Update profile step 1: choice ───────────────────────
     if (ctx.session.step === 'awaiting_update_choice') {
-      const choiceMap: Record<string, 'weight' | 'goal' | 'both'> = {
-        '1': 'weight',
-        '2': 'goal',
-        '3': 'both',
-        'peso': 'weight',
-        'objetivo': 'goal',
-        'ambos': 'both',
-      };
-      const choice = choiceMap[text.toLowerCase()];
+      const choiceMap = new Map<string, 'weight' | 'goal' | 'both'>([
+        ['1', 'weight'],
+        ['2', 'goal'],
+        ['3', 'both'],
+        ['peso', 'weight'],
+        ['objetivo', 'goal'],
+        ['ambos', 'both'],
+      ]);
+      const choice = choiceMap.get(text.toLowerCase());
 
       if (!choice) {
         await ctx.reply('Elegí una opción:\n1️⃣ Peso\n2️⃣ Objetivo\n3️⃣ Ambos\n\nRespondé 1, 2 o 3. (O /cancel)');
@@ -307,16 +307,16 @@ export function createBot(): Bot<BotContext> {
 
     // ── Update profile step 3: goal ─────────────────────────
     if (ctx.session.step === 'awaiting_update_goal') {
-      const goalMap: Record<string, string> = {
-        '1': 'lose_fat',
-        '2': 'maintain',
-        '3': 'gain_muscle',
-        'perder': 'lose_fat',
-        'mantener': 'maintain',
-        'ganar': 'gain_muscle',
-      };
+      const goalMap = new Map<string, string>([
+        ['1', 'lose_fat'],
+        ['2', 'maintain'],
+        ['3', 'gain_muscle'],
+        ['perder', 'lose_fat'],
+        ['mantener', 'maintain'],
+        ['ganar', 'gain_muscle'],
+      ]);
 
-      const goal = goalMap[text.toLowerCase()];
+      const goal = goalMap.get(text.toLowerCase());
       if (!goal) {
         await ctx.reply('Elegí una opción:\n1️⃣ Perder grasa\n2️⃣ Mantener peso\n3️⃣ Ganar músculo\n\nRespondé 1, 2 o 3.');
         return;
@@ -346,16 +346,16 @@ export function createBot(): Bot<BotContext> {
 
     // ── Onboarding step 1: goal selection ───────────────────
     if (ctx.session.step === 'awaiting_goal') {
-      const goalMap: Record<string, string> = {
-        '1': 'lose_fat',
-        '2': 'maintain',
-        '3': 'gain_muscle',
-        'perder': 'lose_fat',
-        'mantener': 'maintain',
-        'ganar': 'gain_muscle',
-      };
+      const goalMap = new Map<string, string>([
+        ['1', 'lose_fat'],
+        ['2', 'maintain'],
+        ['3', 'gain_muscle'],
+        ['perder', 'lose_fat'],
+        ['mantener', 'maintain'],
+        ['ganar', 'gain_muscle'],
+      ]);
 
-      const goal = goalMap[text.toLowerCase()];
+      const goal = goalMap.get(text.toLowerCase());
       if (!goal) {
         await ctx.reply('Elegí una opción:\n1️⃣ Perder grasa\n2️⃣ Mantener peso\n3️⃣ Ganar músculo\n\nRespondé 1, 2 o 3.');
         return;

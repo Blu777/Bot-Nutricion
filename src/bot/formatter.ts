@@ -88,15 +88,15 @@ export function formatMealLogged(data: LogMealApiResponse): string {
     });
   }
 
-  if (recommendation.text) {
-    msg += `\n\n💡 ${recommendation.text}`;
-  }
-
-  if (recommendation.variations && recommendation.variations.length > 1) {
-    msg += '\n\n📋 Más opciones:';
-    recommendation.variations.slice(1, 4).forEach((v, i) => {
-      msg += `\n${i + 1}. ${v.text} (~${Math.round(v.estimated_macros.calories)} cal)`;
-    });
+  // Add the LLM Auditor feedback loop
+  if (data.audit) {
+    if (data.audit.status === 'aprobado') {
+      msg += `\n\n✅ Comida Aprobada.`;
+    } else if (data.audit.status === 'incompleto') {
+      msg += `\n\n⚠️ Anotado. Ojo que te faltó: ${data.audit.missing_components.join(', ')}`;
+    } else if (data.audit.status === 'fuera_de_plan') {
+      msg += `\n\n🚫 Fuera de protocolo: ${data.audit.penalties.join(', ')}`;
+    }
   }
 
   return msg;

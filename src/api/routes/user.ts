@@ -26,17 +26,17 @@ userRoutes.get('/user/:telegramId', async (c) => {
     name: user.name,
     weight_kg: user.weight_kg,
     goal: user.goal,
-    goal_label: GOAL_LABELS[user.goal],
+    goal_label: GOAL_LABELS.get(user.goal) ?? 'Desconocido',
     activity_level: user.activity_level,
     targets: user.targets,
   });
 });
 
-const GOAL_LABELS: Record<UserGoal, string> = {
-  lose_fat:     'Perder grasa',
-  maintain:     'Mantener peso',
-  gain_muscle:  'Ganar músculo',
-};
+const GOAL_LABELS = new Map<UserGoal, string>([
+  ['lose_fat', 'Perder grasa'],
+  ['maintain', 'Mantener peso'],
+  ['gain_muscle', 'Ganar músculo']
+]);
 
 interface UpdateProfileRequest {
   weight_kg?: number;
@@ -101,8 +101,8 @@ userRoutes.patch('/user/:telegramId', async (c) => {
 
   return c.json({
     user_id:  user.id,
-    previous: { weight_kg: previousWeight, goal: previousGoal, targets: previousTargets, goal_label: GOAL_LABELS[previousGoal] },
-    updated:  { weight_kg: newWeight, goal: newGoal, targets: newTargets, goal_label: GOAL_LABELS[newGoal] },
+    previous: { weight_kg: previousWeight, goal: previousGoal, targets: previousTargets, goal_label: GOAL_LABELS.get(previousGoal) ?? 'Desconocido' },
+    updated:  { weight_kg: newWeight, goal: newGoal, targets: newTargets, goal_label: GOAL_LABELS.get(newGoal) ?? 'Desconocido' },
   });
 });
 

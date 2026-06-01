@@ -29,6 +29,7 @@ export interface LogMealApiResponse {
     remaining: { calories: number; protein: number; carbs: number; fats: number };
   };
   recommendation: { text: string; suggested_foods: string[]; variations: Array<{ text: string; foods: string[]; estimated_macros: { calories: number; protein: number; carbs: number; fats: number } }> };
+  audit: { status: string; missing_components: string[]; penalties: string[] };
   message: string;
 }
 

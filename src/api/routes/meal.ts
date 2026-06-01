@@ -151,8 +151,8 @@ mealRoutes.post('/log-meal', async (c) => {
   // 5b. Determine if it's a training day (basic heuristic for now)
   const isTrainingDay = body.text.toLowerCase().includes('entrené') || body.text.toLowerCase().includes('entrene') || body.text.toLowerCase().includes('gym');
 
-  // 5c. Audit the meal against the clinical plan
-  const auditResult = auditMeal(parseResult.items, isTrainingDay);
+  // 5c. Audit the meal against the clinical plan using Gemini
+  const auditResult = await auditMeal(body.text, parseResult.items, isTrainingDay);
 
   // 6. Save meal (stores raw_text, parsed_items, nutrition, confidence, status)
   const meal = await createMeal({
@@ -213,6 +213,7 @@ mealRoutes.post('/log-meal', async (c) => {
       remaining,
     },
     recommendation,
+    audit: auditResult,
     message,
   };
 
